@@ -109,3 +109,31 @@ struct OpenRouterClientTests {
         }
     }
 }
+
+extension OpenRouterClientTests {
+    static func response(content: String, finishReason: String?) -> Data {
+        var choice: [String: Any] = ["message": ["role": "assistant", "content": content]]
+        if let finishReason { choice["finish_reason"] = finishReason }
+        return try! JSONSerialization.data(withJSONObject: ["choices": [choice]])
+    }
+
+    @Test func truncatedAnswerIsRejected() async {
+        StubURLProtocol.handler = { _ in (200, Self.response(content: "Half an ans", finishReason: "length")) }
+        await #expect(throws: RephraseError.truncated) {
+            try await client.rephrase(text: "hi", systemPrompt: "p")
+        }
+    }
+
+    @Test func filteredAnswerIsRejected() async {
+        StubURLProtocol.handler = { _ in (200, Self.response(content: "[removed]", finishReason: "content_filter")) }
+        await #expect(throws: RephraseError.contentFiltered) {
+            try await client.rephrase(text: "hi", systemPrompt: "p")
+        }
+    }
+
+    @Test(arguments: ["stop", nil])
+    func normalFinishIsAccepted(finishReason: String?) async throws {
+        StubURLProtocol.handler = { _ in (200, Self.response(content: "Done", finishReason: finishReason)) }
+        #expect(try await client.rephrase(text: "hi", systemPrompt: "p") == "Done")
+    }
+}

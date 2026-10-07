@@ -46,6 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        settings.flushAPIKey()
+    }
+
     /// Runs a profile; `delay` lets the menu close and focus return to the previous app.
     func run(_ profile: Profile, delay: Duration = .zero) {
         Task {

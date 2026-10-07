@@ -11,6 +11,8 @@ nonisolated enum RephraseError: Error, Equatable, Sendable {
     case timeout
     case network(String)
     case emptyResponse
+    case truncated
+    case contentFiltered
     case cancelled
 
     var message: String {
@@ -25,6 +27,8 @@ nonisolated enum RephraseError: Error, Equatable, Sendable {
         case .timeout: "AI request timed out"
         case let .network(description): "Network error: \(description)"
         case .emptyResponse: "AI returned empty text"
+        case .truncated: "AI answer was cut off — nothing replaced"
+        case .contentFiltered: "AI provider filtered the answer — nothing replaced"
         case .cancelled: "Cancelled"
         }
     }

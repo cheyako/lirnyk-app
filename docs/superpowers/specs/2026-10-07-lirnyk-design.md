@@ -101,13 +101,14 @@ with fakes.
 
 ### 4.2 SettingsStore
 - `modelID: String` in UserDefaults, default `openai/gpt-4o-mini`.
-- `apiKey: String?` in Keychain (service `com.metajourney.lirnyk`, account `openrouter`).
+- `apiKey: String?` in Keychain (service `com.metajourney.lirnyk`, account `openrouter`). Written via update-or-add, debounced (~0.8 s after typing stops, on Return, before Test connection, and on quit).
 - `launchAtLogin: Bool` proxied to `SMAppService.mainApp` status. Enabled on first run.
 
 ### 4.3 OpenRouterClient
 - `POST https://openrouter.ai/api/v1/chat/completions`
 - Headers: `Authorization: Bearer <key>`, `Content-Type: application/json`, `X-Title: Lirnyk`.
 - Body: `{ "model": modelID, "messages": [ {role: system, content: profile.prompt}, {role: user, content: text} ] }`, no streaming.
+- `finish_reason` `length` → `truncated`, `content_filter` → `contentFiltered` (nothing is pasted).
 - Timeout 30 s. Response: `choices[0].message.content`, trimmed of leading/trailing whitespace/newlines.
 - Errors mapped to `RephraseError`: `missingAPIKey`, `unauthorized` (401), `insufficientCredits` (402),
   `rateLimited` (429), `server(status, message)`, `timeout`, `emptyResponse`, `network(underlying)`.

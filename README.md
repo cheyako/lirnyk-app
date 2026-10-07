@@ -26,4 +26,6 @@ One-time:
    (use an app-specific password).
 
 Then: `make release` → `build/release/Lirnyk-<version>.dmg`.
+The script picks the single valid *Developer ID Application* certificate for team 2S5U65Y5CZ; if you have
+several, set `SIGN_IDENTITY=<SHA-1>`. A rejected notarization prints Apple's log and stops.
 Bump `MARKETING_VERSION` in `project.yml` per release.

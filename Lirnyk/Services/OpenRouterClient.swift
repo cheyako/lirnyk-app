@@ -60,6 +60,12 @@ final class OpenRouterClient: RephraseClient {
             throw RephraseError.server(status: status, message: apiError.message)
         }
 
+        switch decoded?.choices?.first?.finishReason {
+        case "length": throw RephraseError.truncated
+        case "content_filter": throw RephraseError.contentFiltered
+        default: break
+        }
+
         let content = decoded?.choices?.first?.message.content?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !content.isEmpty else { throw RephraseError.emptyResponse }
@@ -81,6 +87,12 @@ private nonisolated struct ChatResponse: Decodable {
     struct Choice: Decodable {
         struct Message: Decodable { let content: String? }
         let message: Message
+        let finishReason: String?
+
+        enum CodingKeys: String, CodingKey {
+            case message
+            case finishReason = "finish_reason"
+        }
     }
     struct APIError: Decodable { let message: String? }
 

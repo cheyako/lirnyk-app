@@ -48,6 +48,7 @@ struct GeneralSettingsView: View {
             }
             Section("OpenRouter") {
                 SecureField("API key", text: $settings.apiKey)
+                    .onSubmit { settings.flushAPIKey() }
                 TextField("Model", text: $settings.modelID)
                 HStack {
                     Link("Browse models", destination: URL(string: "https://openrouter.ai/models")!)
@@ -82,6 +83,7 @@ struct GeneralSettingsView: View {
         Task {
             defer { isTesting = false }
             do {
+                settings.flushAPIKey()
                 let reply = try await client.rephrase(text: "ping", systemPrompt: "Reply with the single word OK.")
                 testResult = "✓ \(reply.prefix(40))"
             } catch {
