@@ -73,6 +73,8 @@ Then: `make release` → `build/release/Lirnyk-<version>.dmg`.
 The script picks the single valid *Developer ID Application* certificate for team 2S5U65Y5CZ; if you have
 several, set `SIGN_IDENTITY=<SHA-1>`. A rejected notarization prints Apple's log and stops.
 Bump `MARKETING_VERSION` in `project.yml` per release.
+Stapling downloads Apple's ticket over a pinned connection: it fails ("Certificate authority pinning
+mismatch", error 68) behind HTTPS-inspecting corporate VPNs/proxies. Disconnect them before `make release`.
 
 ## Quick DMG (not notarized)
 `make dmg` → `build/dmg/Lirnyk-<version>-unnotarized.dmg` in about a minute: Developer ID signed, but not sent
