@@ -5,9 +5,14 @@ struct LirnykApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        MenuBarExtra("Lirnyk", systemImage: "text.bubble") {
-            Button("Quit Lirnyk") { NSApp.terminate(nil) }
-                .keyboardShortcut("q")
+        MenuBarExtra {
+            MenuContent(
+                profiles: appDelegate.profiles,
+                permissions: appDelegate.permissions,
+                runProfile: { appDelegate.run($0, delay: .milliseconds(300)) },
+                openSettings: { appDelegate.openSettings() })
+        } label: {
+            Image(systemName: appDelegate.appState.iconPulse ? "text.bubble.fill" : "text.bubble")
         }
     }
 }
