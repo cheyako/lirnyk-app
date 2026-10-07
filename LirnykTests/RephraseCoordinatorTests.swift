@@ -18,9 +18,9 @@ struct RephraseCoordinatorTests {
             hasAPIKey: { hasAPIKey })
     }
 
-    /// Waits until the coordinator is inside the AI request (Esc monitor installed).
+    /// Waits until the coordinator is inside the AI request (Esc monitor installed, client called).
     func waitUntilRequesting() async {
-        while cancelKey.onCancel == nil { await Task.yield() }
+        while cancelKey.onCancel == nil || client.calls.isEmpty { await Task.yield() }
     }
 
     @Test func happyPathReplacesSelection() async {
