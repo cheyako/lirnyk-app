@@ -25,6 +25,7 @@ protocol CancelKeyMonitoring: AnyObject {
 @Observable
 final class RephraseCoordinator {
     static let busyMessage = "Busy — still rephrasing"
+    static let couldNotReturnMessage = "Couldn't return to the original app — result copied, press ⌘V"
 
     private(set) var activeProfile: Profile? {
         didSet { onBusyChanged(activeProfile != nil) }
@@ -99,6 +100,11 @@ final class RephraseCoordinator {
             cancelKey.stop()
             if let originApp, focus.frontmostAppID() != originApp {
                 await focus.activate(pid: originApp)
+                guard focus.frontmostAppID() == originApp else {
+                    selection.copyToClipboard(result)
+                    feedback.showInfo(Self.couldNotReturnMessage)
+                    return
+                }
             }
             await selection.replaceSelection(with: Whitespace.preserving(of: original, in: result))
             feedback.hide()

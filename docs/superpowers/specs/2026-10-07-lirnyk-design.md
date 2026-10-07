@@ -126,7 +126,7 @@ with fakes.
 `replaceSelection(with: String) async`
 1. Write result to pasteboard as `.string` plus marker type `org.nspasteboard.TransientType`.
 2. Post ⌘V.
-3. After 500 ms restore the snapshot.
+3. After 1 s restore the snapshot — unless the user copied something since the read, in which case their new clipboard is kept.
 
 `restoreClipboard()` — used on cancel/error paths after a successful read.
 
@@ -143,7 +143,7 @@ with fakes.
 5. `AppState.busy = profile`; HUD shows "✦ <title>… esc to cancel"; menu icon animates.
 6. Install global + local Esc key monitor → cancels the task.
 7. `client.rephrase(...)`.
-8. On success: if frontmost app ≠ originApp → `originApp.activate()`, wait 200 ms. Then `replaceSelection(Whitespace.preserving(of: original, in: result))` — the result is trimmed and the original selection's leading/trailing whitespace (e.g. the newline a triple-click selects) is re-applied.
+8. On success: if frontmost app ≠ originApp → `originApp.activate()`, wait 200 ms. If the origin app still isn't frontmost after ~1 s, don't paste: leave the result on the clipboard and show "Couldn't return to the original app — result copied". Then `replaceSelection(Whitespace.preserving(of: original, in: result))` — the result is trimmed and the original selection's leading/trailing whitespace (e.g. the newline a triple-click selects) is re-applied.
 9. On error/cancel: `restoreClipboard()`, HUD error for 3 s (cancel: "Cancelled", 1 s).
 10. Always: remove Esc monitor, clear busy state.
 

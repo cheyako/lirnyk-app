@@ -62,6 +62,7 @@ struct GeneralSettingsView: View {
             Section("Startup") {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, enabled in
+                        settings.launchAtLoginWanted = enabled
                         do { try LaunchAtLogin.set(enabled) } catch { launchAtLogin = LaunchAtLogin.isEnabled }
                     }
             }

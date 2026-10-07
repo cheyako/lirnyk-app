@@ -5,8 +5,10 @@ protocol SelectionService: AnyObject {
     func readSelection() async throws -> String
     /// Pastes `text` over the selection, then restores the user's clipboard.
     func replaceSelection(with text: String) async
-    /// Restores the clipboard saved by `readSelection` (no-op if none).
+    /// Restores the clipboard saved by `readSelection` (no-op if none, or if the user copied something since).
     func restoreClipboard()
+    /// Leaves `text` on the clipboard for the user to paste manually; the saved clipboard is discarded.
+    func copyToClipboard(_ text: String)
 }
 
 extension NSPasteboard.PasteboardType {
@@ -14,18 +16,27 @@ extension NSPasteboard.PasteboardType {
 }
 
 final class ClipboardSelectionService: SelectionService {
-    private let pasteboard: NSPasteboard
-    private let keys: KeyEventPoster
-    private var snapshot: PasteboardSnapshot?
+    /// Slow pasters (Electron apps, browsers under load) can read the pasteboard well after ⌘V.
+    static let defaultRestoreDelay: Duration = .seconds(1)
 
-    init(pasteboard: NSPasteboard = .general, keys: KeyEventPoster = KeyEventPoster()) {
+    private let pasteboard: NSPasteboard
+    private let keys: KeyPosting
+    private let restoreDelay: Duration
+    private var snapshot: PasteboardSnapshot?
+    /// Pasteboard change count right after our ⌘C; any later change means the user copied something.
+    private var changeCountAfterCopy: Int?
+
+    init(pasteboard: NSPasteboard = .general, keys: KeyPosting = KeyEventPoster(),
+         restoreDelay: Duration = ClipboardSelectionService.defaultRestoreDelay) {
         self.pasteboard = pasteboard
         self.keys = keys
+        self.restoreDelay = restoreDelay
     }
 
     func readSelection() async throws -> String {
         await keys.waitForModifiersReleased()
         snapshot = PasteboardSnapshot(pasteboard: pasteboard)
+        changeCountAfterCopy = nil
         pasteboard.clearContents()
         let baseline = pasteboard.changeCount
 
@@ -41,23 +52,43 @@ final class ClipboardSelectionService: SelectionService {
             restoreClipboard()
             throw RephraseError.nothingSelected
         }
+        changeCountAfterCopy = pasteboard.changeCount
         return text
     }
 
     func replaceSelection(with text: String) async {
+        if userCopiedSinceRead {
+            snapshot = PasteboardSnapshot(pasteboard: pasteboard)
+        }
         let item = NSPasteboardItem()
         item.setString(text, forType: .string)
         item.setData(Data(), forType: .transient)
         pasteboard.clearContents()
         pasteboard.writeObjects([item])
+        changeCountAfterCopy = pasteboard.changeCount
 
         keys.post(.paste)
-        try? await Task.sleep(for: .milliseconds(500))
+        try? await Task.sleep(for: restoreDelay)
         restoreClipboard()
     }
 
     func restoreClipboard() {
-        snapshot?.restore(to: pasteboard)
+        if !userCopiedSinceRead {
+            snapshot?.restore(to: pasteboard)
+        }
         snapshot = nil
+        changeCountAfterCopy = nil
+    }
+
+    func copyToClipboard(_ text: String) {
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        snapshot = nil
+        changeCountAfterCopy = nil
+    }
+
+    private var userCopiedSinceRead: Bool {
+        guard let changeCountAfterCopy else { return false }
+        return pasteboard.changeCount != changeCountAfterCopy
     }
 }

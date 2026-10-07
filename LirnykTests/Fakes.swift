@@ -4,6 +4,7 @@ import Foundation
 final class FakeSelection: SelectionService {
     var text: String? = "helo wrld"
     var replaced: [String] = []
+    var copied: [String] = []
     var restoreCount = 0
 
     func readSelection() async throws -> String {
@@ -12,6 +13,7 @@ final class FakeSelection: SelectionService {
     }
     func replaceSelection(with text: String) async { replaced.append(text) }
     func restoreClipboard() { restoreCount += 1 }
+    func copyToClipboard(_ text: String) { copied.append(text) }
 }
 
 final class FakeClient: RephraseClient {
@@ -32,10 +34,11 @@ final class FakeAccessibility: AccessibilityChecking {
 final class FakeFocus: FocusTracking {
     var frontmost: pid_t? = 100
     var activated: [pid_t] = []
+    var activationSucceeds = true
     func frontmostAppID() -> pid_t? { frontmost }
     func activate(pid: pid_t) async {
         activated.append(pid)
-        frontmost = pid
+        if activationSucceeds { frontmost = pid }
     }
 }
 

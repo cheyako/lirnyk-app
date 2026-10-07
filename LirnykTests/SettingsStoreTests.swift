@@ -30,4 +30,14 @@ struct SettingsStoreTests {
         settings.apiKey = ""
         #expect(keychain.read(account: "openrouter") == nil)
     }
+
+    @Test func launchAtLoginWantedDefaultsOnAndPersists() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = SettingsStore(defaults: defaults, keychain: keychain)
+        #expect(settings.launchAtLoginWanted)
+        settings.launchAtLoginWanted = false
+        #expect(SettingsStore(defaults: defaults, keychain: keychain).launchAtLoginWanted == false)
+    }
 }

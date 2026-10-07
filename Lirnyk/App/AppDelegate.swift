@@ -7,8 +7,6 @@ enum AppEnvironment {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private static let didLaunchBeforeKey = "didLaunchBefore"
-
     let settings = SettingsStore()
     let profiles = ProfileStore()
     let permissions = PermissionsService()
@@ -42,10 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         profiles.onChange = { [weak self] in self?.hotkeys.sync() }
         hotkeys.sync()
 
-        if !UserDefaults.standard.bool(forKey: Self.didLaunchBeforeKey) {
-            UserDefaults.standard.set(true, forKey: Self.didLaunchBeforeKey)
-            try? LaunchAtLogin.set(true)
-        }
+        LaunchAtLogin.syncOnLaunch(wanted: settings.launchAtLoginWanted)
         if !permissions.checkTrusted() || !settings.hasAPIKey {
             openSettings()
         }

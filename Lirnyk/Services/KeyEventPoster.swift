@@ -1,6 +1,11 @@
 import CoreGraphics
 
-struct KeyEventPoster {
+protocol KeyPosting {
+    func post(_ command: KeyEventPoster.Command)
+    func waitForModifiersReleased() async
+}
+
+struct KeyEventPoster: KeyPosting {
     enum Command {
         case copy, paste
 
@@ -18,7 +23,11 @@ struct KeyEventPoster {
     }
 
     /// Waits until the user releases ⌘⇧⌥⌃ so the synthetic ⌘C isn't merged with held modifiers.
-    func waitForModifiersReleased(timeout: Duration = .seconds(1)) async {
+    func waitForModifiersReleased() async {
+        await waitForModifiersReleased(timeout: .seconds(1))
+    }
+
+    func waitForModifiersReleased(timeout: Duration) async {
         let modifiers: CGEventFlags = [.maskCommand, .maskShift, .maskAlternate, .maskControl]
         let clock = ContinuousClock()
         let deadline = clock.now + timeout

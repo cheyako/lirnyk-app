@@ -125,6 +125,18 @@ struct RephraseCoordinatorTests {
         #expect(selection.replaced == ["hello world"])
     }
 
+    @Test func copiesResultInsteadOfPastingWhenReactivationFails() async {
+        focus.activationSucceeds = false
+        client.handler = { [focus] _, _ in
+            focus.frontmost = 200
+            return "hello world"
+        }
+        await makeCoordinator().run(profile)
+        #expect(selection.replaced.isEmpty)
+        #expect(selection.copied == ["hello world"])
+        #expect(feedback.events.last == .info(RephraseCoordinator.couldNotReturnMessage))
+    }
+
     @Test func doesNotReactivateWhenFocusUnchanged() async {
         await makeCoordinator().run(profile)
         #expect(focus.activated.isEmpty)
