@@ -1,0 +1,56 @@
+name: Lirnyk
+options:
+  bundleIdPrefix: com.metajourney
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: 3.0.0
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    DEVELOPMENT_TEAM: 2S5U65Y5CZ
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "Apple Development"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Lirnyk:
+    type: application
+    platform: macOS
+    sources: [Lirnyk]
+    dependencies:
+      - package: KeyboardShortcuts
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.metajourney.lirnyk
+        PRODUCT_NAME: Lirnyk
+        ENABLE_HARDENED_RUNTIME: YES
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Lirnyk
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+  LirnykTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [LirnykTests]
+    dependencies:
+      - target: Lirnyk
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.metajourney.lirnyk.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Lirnyk.app/Contents/MacOS/Lirnyk"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  Lirnyk:
+    build:
+      targets:
+        Lirnyk: all
+        LirnykTests: [test]
+    test:
+      targets: [LirnykTests]
