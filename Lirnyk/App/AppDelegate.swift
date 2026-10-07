@@ -59,7 +59,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private lazy var settingsWindow = SettingsWindowController { [unowned self] in
+        SettingsView(settings: settings, profiles: profiles, permissions: permissions, client: client)
+    }
+
     func openSettings() {
-        // Replaced by SettingsWindowController in Task 7.
+        settingsWindow.show()
     }
 }
