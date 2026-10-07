@@ -53,8 +53,8 @@ Bundle ID: `com.metajourney.lirnyk`.
 ```
 Lirnyk/
   App/
-    LirnykApp.swift          @main; MenuBarExtra + Settings scene; wires dependencies
-    AppState.swift           @Observable: busy state, current profile, last error
+    LirnykApp.swift          @main; MenuBarExtra scene + AppDelegate that wires dependencies
+    AppState.swift           @Observable: busy flag + menu-bar icon pulse frame
   Model/
     Profile.swift            struct Profile: Codable, Identifiable {id, title, prompt}
     ProfileStore.swift       @Observable; load/save JSON; seed defaults; CRUD
@@ -74,6 +74,7 @@ Lirnyk/
     MenuContent.swift        menu-bar dropdown
     HUDPanel.swift           non-activating NSPanel near cursor
     SettingsView.swift       TabView: General, Profiles
+    SettingsWindowController.swift  own NSWindow hosting SettingsView (SwiftUI Settings scene cannot be opened programmatically on macOS 14)
     GeneralSettingsView.swift
     ProfilesSettingsView.swift
 LirnykTests/
@@ -89,7 +90,7 @@ with fakes.
 
 ### 4.1 Profile & ProfileStore
 - `Profile { id: UUID, title: String, prompt: String }`. The hotkey is **not** stored in the
-  profile; it's stored by KeyboardShortcuts under the name `profile.<uuid>`.
+  profile; it's stored by KeyboardShortcuts under the name `profile_<uuid>` (KeyboardShortcuts names must not contain dots).
 - Persisted at `~/Library/Application Support/Lirnyk/profiles.json` (atomic writes).
 - First launch (file absent) seeds:
   - **Friendly** — ⌃⌥F — "Fix typos and grammar. Make the text more friendly and warm. Emoji are allowed where natural. Keep the original language. Output only the rewritten text."
@@ -130,7 +131,7 @@ with fakes.
 `restoreClipboard()` — used on cancel/error paths after a successful read.
 
 ### 4.5 HotkeyManager
-- Observes ProfileStore; for each profile calls `KeyboardShortcuts.onKeyUp(for: .init("profile.\(id)"))` → `coordinator.run(profile)`. Re-syncs on profile add/delete (removes handlers of deleted profiles).
+- Observes ProfileStore; for each profile calls `KeyboardShortcuts.onKeyUp(for: .init("profile_\(id)"))` → `coordinator.run(profile)`. Re-syncs on profile add/delete (removes handlers of deleted profiles).
 - Uses key-*up* to reduce the chance modifiers are still held.
 
 ### 4.6 RephraseCoordinator (`@MainActor`)
@@ -142,7 +143,7 @@ with fakes.
 5. `AppState.busy = profile`; HUD shows "✦ <title>… esc to cancel"; menu icon animates.
 6. Install global + local Esc key monitor → cancels the task.
 7. `client.rephrase(...)`.
-8. On success: if frontmost app ≠ originApp → `originApp.activate()`, wait 200 ms. Then `replaceSelection`.
+8. On success: if frontmost app ≠ originApp → `originApp.activate()`, wait 200 ms. Then `replaceSelection(Whitespace.preserving(of: original, in: result))` — the result is trimmed and the original selection's leading/trailing whitespace (e.g. the newline a triple-click selects) is re-applied.
 9. On error/cancel: `restoreClipboard()`, HUD error for 3 s (cancel: "Cancelled", 1 s).
 10. Always: remove Esc monitor, clear busy state.
 
@@ -155,7 +156,7 @@ previous app regains focus.
 
 ### 4.8 Settings window
 - **General**: Accessibility status (green check or warning + "Open System Settings" button, refreshed on window focus); OpenRouter API key (`SecureField`, saved to Keychain on commit); Model ID text field with link to openrouter.ai/models; Launch at login toggle; "Test connection" button (sends "ping" with system prompt "Reply with OK" and shows result/error).
-- **Profiles**: `NavigationSplitView`-style list (+ / − buttons) and detail with Title `TextField`, `KeyboardShortcuts.Recorder`, Prompt `TextEditor`. Changes saved automatically (debounced 0.5 s).
+- **Profiles**: `NavigationSplitView`-style list (+ / − buttons) and detail with Title `TextField`, `KeyboardShortcuts.Recorder`, Prompt `TextEditor`. Changes saved to disk on every edit (file is tiny).
 
 ### 4.9 Menu
 ```
@@ -182,7 +183,7 @@ Quit Lirnyk         ⌘Q
 
 ## 6. Testing
 
-Automated (XCTest, `xcodebuild test`):
+Automated (Swift Testing, `xcodebuild test`, hosted in the app; app skips startup when running under tests):
 - `OpenRouterClientTests`: request shape (URL, headers, body), success parsing and trimming, each HTTP error mapping, empty content → `emptyResponse`, missing key.
 - `ProfileStoreTests`: seeding on first launch, save/load round trip, add/delete, corrupt file → reseeds without crashing (backs up corrupt file).
 - `RephraseCoordinatorTests` (fake SelectionService, fake RephraseClient, fake permission/frontmost providers): happy path calls replace with result; nothing-selected path; error path restores clipboard and doesn't replace; cancel path; busy re-entry ignored.
