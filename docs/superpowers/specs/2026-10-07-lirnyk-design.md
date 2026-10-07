@@ -151,7 +151,7 @@ The menu "run profile" action waits 300 ms after the menu closes before calling 
 previous app regains focus.
 
 ### 4.7 Feedback UI
-- **Menu-bar icon**: SF Symbol `text.quote` normally; while busy, cycles a pulse animation (`symbolEffect(.pulse)` or alternating symbol via timer).
+- **Menu-bar icon**: custom template glyph `MenuBarIcon` (asset catalog SVG, 18 pt); while busy, alternates with a 35%-opacity copy every 400 ms.
 - **HUDPanel**: borderless, non-activating `NSPanel`, `.floating` level, joins all spaces, ignores mouse. Positioned 16 pt below-right of the mouse location, clamped to the screen's visible frame. Capsule with `.regularMaterial`. States: working (spinner + text), error (red icon + message, auto-hide 3 s).
 
 ### 4.8 Settings window

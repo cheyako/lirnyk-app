@@ -12,7 +12,7 @@ struct LirnykApp: App {
                 runProfile: { appDelegate.run($0, delay: .milliseconds(300)) },
                 openSettings: { appDelegate.openSettings() })
         } label: {
-            Image(systemName: appDelegate.appState.iconPulse ? "text.bubble.fill" : "text.bubble")
+            MenuBarIcon(appState: appDelegate.appState)
         }
     }
 }
