@@ -53,16 +53,22 @@ main() {
   mkdir -p "$OUT"
   xcodegen generate --quiet
 
-  echo "==> Archiving $version (identity $identity)"
+  # Archive with the project's normal signing; the developer-id export re-signs every
+  # nested bundle (including SwiftPM resource bundles) with the Developer ID identity.
+  echo "==> Archiving $version"
   xcodebuild -project Lirnyk.xcodeproj -scheme Lirnyk -configuration Release \
-    -archivePath "$OUT/Lirnyk.xcarchive" archive \
-    CODE_SIGN_IDENTITY="$identity" OTHER_CODE_SIGN_FLAGS="--timestamp" -quiet
+    -archivePath "$OUT/Lirnyk.xcarchive" archive -quiet
 
-  echo "==> Exporting"
+  echo "==> Exporting with $identity"
+  plutil -replace signingCertificate -string "$identity" -o "$OUT/ExportOptions.plist" scripts/ExportOptions.plist
   xcodebuild -exportArchive -archivePath "$OUT/Lirnyk.xcarchive" \
-    -exportPath "$OUT/export" -exportOptionsPlist scripts/ExportOptions.plist -quiet
+    -exportPath "$OUT/export" -exportOptionsPlist "$OUT/ExportOptions.plist" -quiet
   app="$OUT/export/Lirnyk.app"
   codesign --verify --deep --strict --verbose=2 "$app"
+  local signature
+  signature=$(codesign -dv --verbose=2 "$app" 2>&1)
+  [[ $signature == *"Authority=Developer ID Application: "*"($TEAM_ID)"* ]] ||
+    { echo "error: exported app is not signed with Developer ID" >&2; return 1; }
 
   echo "==> Notarizing app"
   ditto -c -k --keepParent "$app" "$OUT/Lirnyk.zip"

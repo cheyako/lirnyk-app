@@ -73,3 +73,7 @@ Then: `make release` → `build/release/Lirnyk-<version>.dmg`.
 The script picks the single valid *Developer ID Application* certificate for team 2S5U65Y5CZ; if you have
 several, set `SIGN_IDENTITY=<SHA-1>`. A rejected notarization prints Apple's log and stops.
 Bump `MARKETING_VERSION` in `project.yml` per release.
+
+## Quick DMG (not notarized)
+`make dmg` → `build/dmg/Lirnyk-<version>-unnotarized.dmg` in about a minute: Developer ID signed, but not sent
+to Apple. Fine for your own Macs; others must allow it via System Settings → Privacy & Security → *Open Anyway*.
