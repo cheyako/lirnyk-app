@@ -1,18 +1,18 @@
 # Releasing a new version
 
 Lirnyk is distributed as a notarized DMG attached to a GitHub release of
-[cheyako/lirnyk-app](https://github.com/cheyako/lirnyk-app/releases). *Check for Updates* in Settings
+[cheyako/lirnyk-app](https://github.com/cheyako/lirnyk-app/releases). _Check for Updates_ in Settings
 compares the installed version with the tag of the latest full release, so the tag and the version must match.
 
 ## Choosing the number
 
 `MARKETING_VERSION` follows `MAJOR.MINOR.PATCH`:
 
-| Change                                   | Example         |
-|------------------------------------------|-----------------|
-| Fixes only                               | 0.2.0 → 0.2.1   |
-| New features                             | 0.2.1 → 0.3.0   |
-| Stable / breaking behaviour change       | 0.9.0 → 1.0.0   |
+| Change                             | Example       |
+| ---------------------------------- | ------------- |
+| Fixes only                         | 0.2.0 → 0.2.1 |
+| New features                       | 0.2.1 → 0.3.0 |
+| Stable / breaking behaviour change | 0.9.0 → 1.0.0 |
 
 `CURRENT_PROJECT_VERSION` is the build number: add 1 on every release, never reset it.
 
@@ -72,7 +72,7 @@ On https://github.com/cheyako/lirnyk-app/releases/new:
 - **Title:** `Lirnyk 0.3.0`
 - **Description:** the contents of `build/release/notes-0.3.0.md`
 - **Attach:** `build/release/Lirnyk-0.3.0.dmg`
-- Leave **Set as a pre-release** unchecked (pre-releases are invisible to *Check for Updates*) and keep
+- Leave **Set as a pre-release** unchecked (pre-releases are invisible to _Check for Updates_) and keep
   **Set as the latest release** checked.
 
 Or with the GitHub CLI, logged in as an account that can publish to `cheyako/lirnyk-app`:
@@ -82,4 +82,4 @@ gh release create v0.3.0 build/release/Lirnyk-0.3.0.dmg --repo cheyako/lirnyk-ap
   --title "Lirnyk 0.3.0" --notes-file build/release/notes-0.3.0.md
 ```
 
-Then, in an installed older version, *Settings → About → Check for Updates* should offer the new release.
+Then, in an installed older version, _Settings → About → Check for Updates_ should offer the new release.
