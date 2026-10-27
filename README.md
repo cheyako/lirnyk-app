@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/icon.png" width="128" height="128" alt="Lirnyk icon"></p>
+
 # Lirnyk
 
 macOS menu-bar app that rephrases the selected text in any app with AI: [OpenRouter](https://openrouter.ai), OpenAI, Anthropic, Gemini, or a local model through [Ollama](https://ollama.com).
@@ -75,11 +77,10 @@ Lirnyk/
 LirnykTests/    Swift Testing unit tests with fakes for the system and network
 scripts/        release.sh (notarized DMG) and its tests
 scripts/        also notes.sh (release notes from CHANGELOG.md)
-docs/           release steps, manual test checklist, design spec and implementation plan
+docs/           release steps and manual test checklist
 ```
 
 Global shortcuts use [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts).
-The design is described in [docs/superpowers/specs/2026-10-07-lirnyk-design.md](docs/superpowers/specs/2026-10-07-lirnyk-design.md).
 Before a release, run the manual checklist in [docs/manual-test.md](docs/manual-test.md).
 
 ## Release (notarized DMG)
@@ -101,3 +102,6 @@ to Apple. Fine for your own Macs; others must allow it via System Settings → P
 
 ## License
 Lirnyk is free software under the [GNU General Public License v3.0](LICENSE).
+
+The Lirnyk name and icon are not covered by the license. Forks and modified builds must use a different name
+and icon (GPLv3 section 7(e)).
