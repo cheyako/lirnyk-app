@@ -9,6 +9,8 @@ set -euo pipefail
 TEAM_ID=2S5U65Y5CZ
 NOTARY_PROFILE="${NOTARY_PROFILE:-lirnyk-notary}"
 OUT=build/release
+# shellcheck source=notes.sh
+source "$(dirname "${BASH_SOURCE[0]}")/notes.sh"   # for changelog_section and release_notes
 
 # Prints the SHA-1 of the single valid "Developer ID Application" certificate for TEAM_ID.
 resolve_signing_identity() {
@@ -48,6 +50,7 @@ main() {
   local identity version app stage dmg
   identity=$(resolve_signing_identity)
   version=$(sed -nE 's/^ *MARKETING_VERSION: "(.*)"/\1/p' project.yml)
+  changelog_section "$version" CHANGELOG.md > /dev/null  # fail before the long build, not after
 
   rm -rf "$OUT"
   mkdir -p "$OUT"
@@ -89,7 +92,9 @@ main() {
   xcrun stapler staple "$dmg"
   spctl --assess --type open --context context:primary-signature --verbose "$dmg"
 
+  release_notes "$version" CHANGELOG.md "$dmg" > "$OUT/notes-$version.md"
   echo "Done: $dmg"
+  echo "Release notes: $OUT/notes-$version.md"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

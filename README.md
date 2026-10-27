@@ -26,6 +26,8 @@ The app has no Dock icon. It starts at login by default.
     make test      # unit tests
     make build     # Debug build
     make install   # Release build → /Applications/Lirnyk.app and launch
+    make release   # notarized DMG + release notes in build/release/ (see docs/releasing.md)
+    make notes     # regenerate release notes for the current version from CHANGELOG.md
     make clean     # remove build/ and the generated Xcode project
 
 `Lirnyk.xcodeproj` is generated from `project.yml`. Every make target regenerates it, so edit `project.yml`, not the project.
@@ -42,11 +44,12 @@ then pick a provider and enter its API key in Settings.
 - **About** (in General): the installed version and *Check for Updates*, which compares it with the latest
   [GitHub release](https://github.com/cheyako/lirnyk-app/releases) and links to the download when a newer one exists.
 
-## Versioning
+## Versioning and releases
 The version lives in `project.yml`: `MARKETING_VERSION` (shown in Settings, used for the DMG name and the `vX.Y.Z`
 release tag) and `CURRENT_PROJECT_VERSION` (build number, bumped with every release).
-To release: bump both, commit, `make release`, then publish a GitHub release tagged `vX.Y.Z` with the DMG.
-*Check for Updates* only sees full (non-prerelease) releases.
+User-facing changes go in [CHANGELOG.md](CHANGELOG.md) under *Unreleased*; `make notes` turns a version's section
+into GitHub release notes. The five release steps (bump, commit, `make release`, tag, publish) are in
+[docs/releasing.md](docs/releasing.md).
 
 ## Profiles
 Each profile has a title, a global shortcut and a prompt. The prompt is sent as the system
@@ -66,7 +69,8 @@ Lirnyk/
   UI/           menu, HUD panel, Settings window, menu-bar icon
 LirnykTests/    Swift Testing unit tests with fakes for the system and network
 scripts/        release.sh (notarized DMG) and its tests
-docs/           manual test checklist, design spec and implementation plan
+scripts/        also notes.sh (release notes from CHANGELOG.md)
+docs/           release steps, manual test checklist, design spec and implementation plan
 ```
 
 Global shortcuts use [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts).

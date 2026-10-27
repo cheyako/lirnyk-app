@@ -3,7 +3,7 @@ DERIVED := build/DerivedData
 XCB := xcodebuild -project Lirnyk.xcodeproj -scheme Lirnyk -derivedDataPath $(DERIVED) -destination "platform=macOS,arch=arm64"
 RELEASE_APP := $(DERIVED)/Build/Products/Release/Lirnyk.app
 
-.PHONY: project build test test-release install release dmg clean
+.PHONY: project build test test-release install release notes dmg clean
 
 project:
 	xcodegen generate --quiet
@@ -26,6 +26,9 @@ install: project
 
 release: test-release
 	scripts/release.sh
+
+notes:
+	scripts/notes.sh
 
 dmg:
 	scripts/dmg.sh

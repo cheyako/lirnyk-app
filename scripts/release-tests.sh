@@ -54,5 +54,40 @@ fake_xcrun '{"id":"abc-456","status":"Invalid","message":"Processing complete"}'
 check "notarize fails on Invalid" 1 notarize dummy.zip
 [[ $LAST_OUTPUT == *LOG-CALLED* ]] && echo "✔ notarize prints the notary log on failure" || { echo "✘ notary log not printed: $LAST_OUTPUT"; failures=$((failures + 1)); }
 
+CHANGELOG=$FAKES/CHANGELOG.md
+cat > "$CHANGELOG" <<'MD'
+# Changelog
+
+## Unreleased
+
+## 0.3.0 — 2026-11-01
+
+Third.
+
+### New
+- Thing
+
+## 0.2.0 — 2026-10-27
+Second.
+
+## 0.1.0 — 2026-10-07
+First.
+MD
+check "changelog_section extracts a middle version" 0 changelog_section 0.3.0 "$CHANGELOG"
+[[ $LAST_OUTPUT == $'Third.\n\n### New\n- Thing' ]] && echo "✔ section is trimmed and stops at the next version" || { echo "✘ wrong section: $LAST_OUTPUT"; failures=$((failures + 1)); }
+check "changelog_section extracts the last version" 0 changelog_section 0.1.0 "$CHANGELOG"
+[[ $LAST_OUTPUT == "First." ]] || { echo "✘ wrong last section: $LAST_OUTPUT"; failures=$((failures + 1)); }
+check "changelog_section fails for a missing version" 1 changelog_section 9.9.9 "$CHANGELOG"
+check "changelog_section fails for an empty section" 1 changelog_section Unreleased "$CHANGELOG"
+check "changelog_section does not match a version prefix" 1 changelog_section 0.3 "$CHANGELOG"
+
+printf 'dmg' > "$FAKES/Lirnyk.dmg"
+check "release_notes includes the DMG's SHA-256" 0 release_notes 0.2.0 "$CHANGELOG" "$FAKES/Lirnyk.dmg"
+[[ $LAST_OUTPUT == Second.* && $LAST_OUTPUT == *"\`$(shasum -a 256 "$FAKES/Lirnyk.dmg" | awk '{print $1}')\`"* ]] \
+  && echo "✔ notes start with the section and end with the checksum" || { echo "✘ wrong notes: $LAST_OUTPUT"; failures=$((failures + 1)); }
+check "release_notes works before the DMG exists" 0 release_notes 0.2.0 "$CHANGELOG" "$FAKES/missing.dmg"
+[[ $LAST_OUTPUT == *"run make release first"* ]] || { echo "✘ no placeholder: $LAST_OUTPUT"; failures=$((failures + 1)); }
+check "release_notes fails without a changelog section" 1 release_notes 9.9.9 "$CHANGELOG" "$FAKES/Lirnyk.dmg"
+
 echo "$failures failure(s)"
 exit $(( failures > 0 ))
