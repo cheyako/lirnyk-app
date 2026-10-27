@@ -4,10 +4,15 @@ import SwiftUI
 struct MenuContent: View {
     let profiles: ProfileStore
     let permissions: PermissionsService
+    let updates: UpdateMonitor
     let runProfile: (Profile) -> Void
     let openSettings: () -> Void
 
     var body: some View {
+        if let update = updates.available {
+            Button("Update Available: Lirnyk \(update.version)…") { NSWorkspace.shared.open(update.url) }
+            Divider()
+        }
         ForEach(profiles.profiles) { profile in
             Button(profile.title.isEmpty ? "Untitled" : profile.title) { runProfile(profile) }
                 .globalKeyboardShortcut(.profile(profile.id))

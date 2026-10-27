@@ -12,7 +12,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let permissions = PermissionsService()
     let appState = AppState()
     private let hud = HUDController()
-    private let updates = UpdateChecker()
+    let updates: UpdateMonitor = {
+        let checker = UpdateChecker()
+        return UpdateMonitor { try await checker.check() }
+    }()
 
     lazy var client: AIClient = AIClient { [settings] in
         (provider: settings.provider, apiKey: settings.apiKey, model: settings.modelID)
@@ -42,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeys.sync()
 
         LaunchAtLogin.syncOnLaunch(wanted: settings.launchAtLoginWanted)
+        updates.start()
         if !permissions.checkTrusted() || !settings.hasAPIKey {
             openSettings()
         }

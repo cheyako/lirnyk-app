@@ -6,7 +6,7 @@ struct SettingsView {
     let profiles: ProfileStore
     let permissions: PermissionsService
     let client: RephraseClient
-    let updates: UpdateChecker
+    let updates: UpdateMonitor
 
     /// Every pane shares one size so the window doesn't jump when switching tabs.
     static let paneSize = CGSize(width: 660, height: 460)
@@ -255,13 +255,12 @@ struct AISettingsSections: View {
 }
 
 struct AboutSettingsView: View {
-    let updates: UpdateChecker
+    @Bindable var updates: UpdateMonitor
 
     private static let repositoryURL = URL(string: "https://github.com/cheyako/lirnyk-app")!
     private static let changelogURL = URL(string: "https://github.com/cheyako/lirnyk-app/blob/main/CHANGELOG.md")!
 
     @State private var updateStatus: StatusMessage?
-    @State private var updateURL: URL?
 
     var body: some View {
         SettingsForm {
@@ -281,8 +280,8 @@ struct AboutSettingsView: View {
             }
             Section {
                 LabeledContent {
-                    if let updateURL {
-                        Link("Download", destination: updateURL)
+                    if let update = updates.available {
+                        Link("Download", destination: update.url)
                             .buttonStyle(.borderedProminent)
                     } else {
                         Button("Check for Updates", action: checkForUpdates)
@@ -290,7 +289,15 @@ struct AboutSettingsView: View {
                     }
                 } label: {
                     SettingsLabel("Updates", symbol: "arrow.down.circle.fill", color: .blue)
-                    if let updateStatus { StatusView(status: updateStatus) }
+                    if let updateStatus {
+                        StatusView(status: updateStatus)
+                    } else if let update = updates.available {
+                        StatusView(status: .success("Lirnyk \(update.version) is available"))
+                    }
+                }
+                Toggle(isOn: $updates.checksAutomatically) {
+                    SettingsLabel("Check automatically", symbol: "clock.arrow.circlepath", color: .green)
+                    Text("Once a day, quietly. Nothing is installed without you.")
                 }
                 Link(destination: Self.changelogURL) {
                     SettingsLabel("What's new", symbol: "list.bullet.rectangle.fill", color: .indigo)
@@ -309,9 +316,8 @@ struct AboutSettingsView: View {
                 switch try await updates.check() {
                 case .upToDate:
                     updateStatus = .success("Lirnyk is up to date")
-                case let .available(version, url):
+                case let .available(version, _):
                     updateStatus = .success("Lirnyk \(version) is available")
-                    updateURL = url
                 }
             } catch {
                 updateStatus = .failure((error as? UpdateCheckError)?.message ?? error.localizedDescription)

@@ -9,6 +9,7 @@ struct LirnykApp: App {
             MenuContent(
                 profiles: appDelegate.profiles,
                 permissions: appDelegate.permissions,
+                updates: appDelegate.updates,
                 runProfile: { appDelegate.run($0, delay: .milliseconds(300)) },
                 openSettings: { appDelegate.openSettings() })
         } label: {
