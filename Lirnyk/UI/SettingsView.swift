@@ -6,10 +6,11 @@ struct SettingsView: View {
     let profiles: ProfileStore
     let permissions: PermissionsService
     let client: RephraseClient
+    let updates: UpdateChecker
 
     var body: some View {
         TabView {
-            GeneralSettingsView(settings: settings, permissions: permissions, client: client)
+            GeneralSettingsView(settings: settings, permissions: permissions, client: client, updates: updates)
                 .tabItem { Label("General", systemImage: "gearshape") }
             ProfilesSettingsView(store: profiles)
                 .tabItem { Label("Profiles", systemImage: "text.bubble") }
@@ -22,10 +23,14 @@ struct GeneralSettingsView: View {
     @Bindable var settings: SettingsStore
     let permissions: PermissionsService
     let client: RephraseClient
+    let updates: UpdateChecker
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var testResult: String?
     @State private var isTesting = false
+    @State private var updateStatus: String?
+    @State private var updateURL: URL?
+    @State private var isCheckingUpdates = false
 
     var body: some View {
         Form {
@@ -46,12 +51,17 @@ struct GeneralSettingsView: View {
                     }
                 }
             }
-            Section("OpenRouter") {
-                SecureField("API key", text: $settings.apiKey)
+            Section("AI provider") {
+                Picker("Provider", selection: $settings.provider) {
+                    ForEach(AIProvider.allCases) { Text($0.displayName).tag($0) }
+                }
+                .onChange(of: settings.provider) { testResult = nil }
+                SecureField("\(settings.provider.displayName) API key", text: $settings.apiKey)
                     .onSubmit { settings.flushAPIKey() }
                 TextField("Model", text: $settings.modelID)
                 HStack {
-                    Link("Browse models", destination: URL(string: "https://openrouter.ai/models")!)
+                    Link("Get API key", destination: settings.provider.apiKeysURL)
+                    Link("Browse models", destination: settings.provider.modelsURL)
                     Spacer()
                     if let testResult {
                         Text(testResult).foregroundStyle(.secondary).lineLimit(2)
@@ -67,12 +77,45 @@ struct GeneralSettingsView: View {
                         do { try LaunchAtLogin.set(enabled) } catch { launchAtLogin = LaunchAtLogin.isEnabled }
                     }
             }
+            Section("About") {
+                LabeledContent("Version", value: "\(UpdateChecker.currentVersion) (\(UpdateChecker.currentBuild))")
+                HStack {
+                    if let updateURL {
+                        Link(updateStatus ?? "Download", destination: updateURL)
+                    } else if let updateStatus {
+                        Text(updateStatus).foregroundStyle(.secondary).lineLimit(2)
+                    }
+                    Spacer()
+                    Button("Check for Updates", action: checkForUpdates)
+                        .disabled(isCheckingUpdates)
+                }
+            }
         }
         .formStyle(.grouped)
         .task {
             while !Task.isCancelled {
                 permissions.refresh()
                 try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+
+    private func checkForUpdates() {
+        isCheckingUpdates = true
+        updateURL = nil
+        updateStatus = "Checking…"
+        Task {
+            defer { isCheckingUpdates = false }
+            do {
+                switch try await updates.check() {
+                case .upToDate:
+                    updateStatus = "✓ Lirnyk is up to date"
+                case let .available(version, url):
+                    updateStatus = "Lirnyk \(version) is available — Download"
+                    updateURL = url
+                }
+            } catch {
+                updateStatus = "✗ " + ((error as? UpdateCheckError)?.message ?? error.localizedDescription)
             }
         }
     }

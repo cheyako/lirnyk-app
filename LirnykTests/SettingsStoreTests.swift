@@ -25,6 +25,7 @@ struct SettingsStoreTests {
         }
 
         let settings = SettingsStore(defaults: defaults, keychain: keychain)
+        #expect(settings.provider == .openRouter)
         #expect(settings.modelID == "openai/gpt-4o-mini")
         #expect(!settings.hasAPIKey)
 
@@ -77,6 +78,59 @@ struct SettingsStoreTests {
         #expect(keychain.write(nil, account: "openrouter"))
         #expect(keychain.read(account: "openrouter") == nil)
         #expect(keychain.write(nil, account: "openrouter"))
+    }
+
+    @Test func eachProviderKeepsItsOwnKeyAndModel() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let secrets = FakeSecrets()
+        secrets.values["openrouter"] = "sk-or-old"
+        defaults.set("anthropic/claude-haiku-4.5", forKey: "modelID")
+        let settings = SettingsStore(defaults: defaults, keychain: secrets)
+
+        settings.provider = .anthropic
+        #expect(settings.apiKey == "")
+        #expect(settings.modelID == AIProvider.anthropic.defaultModelID)
+        settings.apiKey = "sk-ant-1"
+        settings.modelID = "claude-sonnet-5-5"
+
+        settings.provider = .openRouter
+        #expect(secrets.values["anthropic"] == "sk-ant-1")
+        #expect(settings.apiKey == "sk-or-old")
+        #expect(settings.modelID == "anthropic/claude-haiku-4.5")
+
+        let reloaded = SettingsStore(defaults: defaults, keychain: secrets)
+        #expect(reloaded.provider == .openRouter)
+        reloaded.provider = .anthropic
+        #expect(reloaded.apiKey == "sk-ant-1")
+        #expect(reloaded.modelID == "claude-sonnet-5-5")
+        #expect(SettingsStore(defaults: defaults, keychain: secrets).provider == .anthropic)
+        #expect(secrets.writes == ["sk-ant-1"])
+    }
+
+    @Test func unknownSavedProviderFallsBackToOpenRouter() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("github", forKey: "provider")
+
+        let settings = SettingsStore(defaults: defaults, keychain: FakeSecrets())
+
+        #expect(settings.provider == .openRouter)
+        #expect(settings.modelID == AIProvider.openRouter.defaultModelID)
+    }
+
+    @Test func switchingProviderCancelsPendingSaveForOldProvider() async throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let secrets = FakeSecrets()
+        let settings = SettingsStore(defaults: defaults, keychain: secrets, apiKeySaveDelay: .milliseconds(10))
+
+        settings.apiKey = "sk-or-3"
+        settings.provider = .gemini
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(secrets.values == ["openrouter": "sk-or-3"])
+        #expect(secrets.writes == ["sk-or-3"])
     }
 
     @Test func launchAtLoginWantedDefaultsOnAndPersists() throws {

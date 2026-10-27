@@ -13,7 +13,12 @@ General:
 - [ ] Press hotkey, then Esc during the request → HUD "Cancelled", no change, clipboard intact.
 - [ ] Press hotkey, switch to another app within 1 s → Lirnyk re-activates the original app and pastes there. If macOS refuses activation, nothing is pasted and HUD says the result was copied.
 - [ ] Press hotkey twice quickly → second shows "Busy — still rephrasing".
-- [ ] Wrong API key → HUD "OpenRouter rejected the API key (401)".
+- [ ] Wrong API key → HUD "The AI provider rejected the API key (401)" (Gemini answers 400 "API key not valid").
+- [ ] For each provider (OpenRouter, OpenAI, Anthropic, Gemini): pick it, enter a key, *Test connection* → ✓, rephrase works.
+- [ ] Switch providers and back → each provider's key and model are still there.
+- [ ] Settings → About shows the version from `project.yml` (e.g. "0.2.0 (2)").
+- [ ] *Check for Updates* while the latest GitHub release is older or equal → "✓ Lirnyk is up to date";
+      when a newer release exists → "Lirnyk X is available — Download" opens the release page.
 - [ ] Ukrainian keyboard layout active → copy/paste still work.
 - [ ] Add a profile, record a shortcut, use it; delete it → shortcut no longer fires.
 - [ ] Click a profile in the menu → runs on current selection in the previous app.

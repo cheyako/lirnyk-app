@@ -12,9 +12,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let permissions = PermissionsService()
     let appState = AppState()
     private let hud = HUDController()
+    private let updates = UpdateChecker()
 
-    lazy var client: OpenRouterClient = OpenRouterClient { [settings] in
-        (apiKey: settings.apiKey, model: settings.modelID)
+    lazy var client: AIClient = AIClient { [settings] in
+        (provider: settings.provider, apiKey: settings.apiKey, model: settings.modelID)
     }
 
     lazy var coordinator: RephraseCoordinator = {
@@ -59,7 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private lazy var settingsWindow = SettingsWindowController { [unowned self] in
-        SettingsView(settings: settings, profiles: profiles, permissions: permissions, client: client)
+        SettingsView(settings: settings, profiles: profiles, permissions: permissions, client: client, updates: updates)
     }
 
     func openSettings() {

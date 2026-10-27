@@ -1,4 +1,8 @@
 import Foundation
+import Testing
+
+/// Parent of every suite that uses `StubURLProtocol`; its shared static state needs them to run one at a time.
+@Suite(.serialized) enum NetworkTests {}
 
 nonisolated final class StubURLProtocol: URLProtocol {
     nonisolated(unsafe) static var handler: ((URLRequest) throws -> (Int, Data))?

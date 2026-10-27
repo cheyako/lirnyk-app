@@ -18,12 +18,12 @@ nonisolated enum RephraseError: Error, Equatable, Sendable {
     var message: String {
         switch self {
         case .accessibilityNotGranted: "Lirnyk needs Accessibility permission"
-        case .missingAPIKey: "Add your OpenRouter API key in Settings"
+        case .missingAPIKey: "Add your API key in Settings"
         case .nothingSelected: "Nothing selected"
-        case .unauthorized: "OpenRouter rejected the API key (401)"
-        case .insufficientCredits: "OpenRouter: insufficient credits (402)"
-        case .rateLimited: "OpenRouter rate limit — try again shortly"
-        case let .server(status, message): "OpenRouter error \(status): \(message ?? "unknown error")"
+        case .unauthorized: "The AI provider rejected the API key (401)"
+        case .insufficientCredits: "AI provider: insufficient credits (402)"
+        case .rateLimited: "AI provider rate limit — try again shortly"
+        case let .server(status, message): "AI provider error \(status): \(message ?? "unknown error")"
         case .timeout: "AI request timed out"
         case let .network(description): "Network error: \(description)"
         case .emptyResponse: "AI returned empty text"

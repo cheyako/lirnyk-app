@@ -1,13 +1,13 @@
 # Lirnyk
 
-macOS menu-bar app that rephrases the selected text in any app with AI (via [OpenRouter](https://openrouter.ai)).
+macOS menu-bar app that rephrases the selected text in any app with AI: [OpenRouter](https://openrouter.ai), OpenAI, Anthropic or Gemini.
 Select text, press a profile hotkey, and the selection is replaced with the rewritten text. ⌘Z undoes it.
 
 ## How it works
 
 1. You press a profile's global hotkey (for example ⌃⌥F) while text is selected.
 2. Lirnyk saves your clipboard, sends ⌘C, and reads the selection from the pasteboard.
-3. It sends the text to OpenRouter. The profile's prompt is the system prompt and the selected text is the user message.
+3. It sends the text to the selected AI provider. The profile's prompt is the system prompt and the selected text is the user message.
 4. When the answer arrives, Lirnyk returns focus to the original app if needed, pastes the result with ⌘V,
    and restores your clipboard. The selection's leading and trailing whitespace is kept.
 
@@ -20,7 +20,7 @@ The app has no Dock icon. It starts at login by default.
 ## Requirements
 - macOS 14+
 - Xcode 26, XcodeGen (`brew install xcodegen`)
-- An OpenRouter API key
+- An API key for OpenRouter, OpenAI, Anthropic or Gemini
 
 ## Build & run
     make test      # unit tests
@@ -31,12 +31,22 @@ The app has no Dock icon. It starts at login by default.
 `Lirnyk.xcodeproj` is generated from `project.yml`. Every make target regenerates it, so edit `project.yml`, not the project.
 
 On first launch grant **Accessibility** (System Settings → Privacy & Security → Accessibility),
-then enter your OpenRouter API key in Settings.
+then pick a provider and enter its API key in Settings.
 
 ## Settings
-- **General**: Accessibility status, OpenRouter API key (stored in the Keychain), model ID
-  (one model for all profiles, default `openai/gpt-4o-mini`), launch at login, and *Test connection*.
+- **General**: Accessibility status, AI provider (OpenRouter, OpenAI, Anthropic or Gemini), the provider's
+  API key (stored in the Keychain) and model ID (one model for all profiles), launch at login, and *Test connection*.
+  Each provider keeps its own key and model, so switching back and forth loses nothing.
+  Default models: OpenRouter `openai/gpt-4o-mini`, OpenAI `gpt-4.1-mini`, Anthropic `claude-haiku-5-5`, Gemini `gemini-2.5-flash`.
 - **Profiles**: add, remove and edit profiles.
+- **About** (in General): the installed version and *Check for Updates*, which compares it with the latest
+  [GitHub release](https://github.com/cheyako/lirnyk-app/releases) and links to the download when a newer one exists.
+
+## Versioning
+The version lives in `project.yml`: `MARKETING_VERSION` (shown in Settings, used for the DMG name and the `vX.Y.Z`
+release tag) and `CURRENT_PROJECT_VERSION` (build number, bumped with every release).
+To release: bump both, commit, `make release`, then publish a GitHub release tagged `vX.Y.Z` with the DMG.
+*Check for Updates* only sees full (non-prerelease) releases.
 
 ## Profiles
 Each profile has a title, a global shortcut and a prompt. The prompt is sent as the system
@@ -49,8 +59,8 @@ Profiles are stored in `~/Library/Application Support/Lirnyk/profiles.json`. You
 ```
 Lirnyk/
   App/          entry point, AppDelegate (dependency wiring), AppState (busy flag, icon animation)
-  Model/        Profile, ProfileStore (JSON), SettingsStore (UserDefaults + Keychain), Keychain
-  Services/     OpenRouterClient, clipboard SelectionService, KeyEventPoster (⌘C/⌘V),
+  Model/        Profile, AIProvider, ProfileStore (JSON), SettingsStore (UserDefaults + Keychain), Keychain
+  Services/     AIClient (all providers), clipboard SelectionService, KeyEventPoster (⌘C/⌘V),
                 HotkeyManager, PasteboardSnapshot, errors, whitespace helpers
   Coordinator/  RephraseCoordinator — runs one rephrase job, handles cancel and errors
   UI/           menu, HUD panel, Settings window, menu-bar icon
