@@ -100,6 +100,9 @@ mismatch", error 68) behind HTTPS-inspecting corporate VPNs/proxies. Disconnect 
 `make dmg` → `build/dmg/Lirnyk-<version>-unnotarized.dmg` in about a minute: Developer ID signed, but not sent
 to Apple. Fine for your own Macs; others must allow it via System Settings → Privacy & Security → *Open Anyway*.
 
+## Support
+Lirnyk is free. If it saves you time, you can [buy me a coffee on Ko-fi](https://ko-fi.com/cheyako) ☕
+
 ## License
 Lirnyk is free software under the [GNU General Public License v3.0](LICENSE).
 

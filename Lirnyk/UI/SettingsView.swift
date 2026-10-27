@@ -307,6 +307,7 @@ struct AboutSettingsView: View {
 
     private static let repositoryURL = URL(string: "https://github.com/cheyako/lirnyk-app")!
     private static let changelogURL = URL(string: "https://github.com/cheyako/lirnyk-app/blob/main/CHANGELOG.md")!
+    private static let donateURL = URL(string: "https://ko-fi.com/cheyako")!
 
     @State private var updateStatus: StatusMessage?
 
@@ -352,6 +353,16 @@ struct AboutSettingsView: View {
                 }
                 Link(destination: Self.repositoryURL) {
                     SettingsLabel("Source on GitHub", symbol: "chevron.left.forwardslash.chevron.right", color: .gray)
+                }
+            }
+            Section {
+                LabeledContent {
+                    Link("Support on Ko-fi", destination: Self.donateURL)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.pink)
+                } label: {
+                    SettingsLabel("Support Lirnyk", symbol: "heart.fill", color: .pink)
+                    Text("Lirnyk is free and open source. A coffee helps keep it going.")
                 }
             }
         }

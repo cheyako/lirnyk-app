@@ -14,6 +14,7 @@ User-facing changes in each Lirnyk release, newest first. Add entries under **Un
 - **Try a profile in Settings**: paste sample text under the prompt and see the rewrite straight away.
 - **Automatic update checks** once a day. A newer release shows in the menu bar menu and in About;
   turn it off in About.
+- **Support Lirnyk** on Ko-fi from Settings → About.
 
 ## 0.2.0 — 2026-10-27
 
