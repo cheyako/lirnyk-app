@@ -1,21 +1,99 @@
 import KeyboardShortcuts
 import SwiftUI
 
-struct SettingsView: View {
+struct SettingsView {
     let settings: SettingsStore
     let profiles: ProfileStore
     let permissions: PermissionsService
     let client: RephraseClient
     let updates: UpdateChecker
 
+    /// Every pane shares one size so the window doesn't jump when switching tabs.
+    static let paneSize = CGSize(width: 660, height: 460)
+
+    struct Pane {
+        let title: String
+        let symbol: String
+        let controller: NSViewController
+    }
+
+    var panes: [Pane] {
+        [
+            pane("General", symbol: "gearshape", GeneralSettingsView(settings: settings, permissions: permissions, client: client)),
+            pane("Profiles", symbol: "text.bubble", ProfilesSettingsView(store: profiles, client: client)),
+            pane("About", symbol: "info.circle", AboutSettingsView(updates: updates)),
+        ]
+    }
+
+    private func pane(_ title: String, symbol: String, _ view: some View) -> Pane {
+        let controller = NSHostingController(rootView: view.frame(width: Self.paneSize.width, height: Self.paneSize.height))
+        controller.sizingOptions = [.preferredContentSize]
+        controller.title = title
+        return Pane(title: title, symbol: symbol, controller: controller)
+    }
+}
+
+private struct SettingsForm<Content: View>: View {
+    @ViewBuilder let content: Content
+
     var body: some View {
-        TabView {
-            GeneralSettingsView(settings: settings, permissions: permissions, client: client, updates: updates)
-                .tabItem { Label("General", systemImage: "gearshape") }
-            ProfilesSettingsView(store: profiles)
-                .tabItem { Label("Profiles", systemImage: "text.bubble") }
+        Form { content }
+            .formStyle(.grouped)
+    }
+}
+
+/// Row label with a coloured icon tile, as in System Settings.
+struct SettingsLabel: View {
+    let title: String
+    let symbol: String
+    let color: Color
+
+    init(_ title: String, symbol: String, color: Color) {
+        self.title = title
+        self.symbol = symbol
+        self.color = color
+    }
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(color.gradient, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
         }
-        .frame(width: 680, height: 480)
+    }
+}
+
+/// Outcome of a one-off action such as a connection test or an update check.
+enum StatusMessage: Equatable {
+    case progress(String)
+    case success(String)
+    case failure(String)
+}
+
+struct StatusView: View {
+    let status: StatusMessage
+
+    var body: some View {
+        switch status {
+        case let .progress(text):
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text(text)
+            }
+            .foregroundStyle(.secondary)
+        case let .success(text):
+            Label(text, systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        case let .failure(text):
+            Label(text, systemImage: "xmark.octagon.fill")
+                .foregroundStyle(.red)
+                .lineLimit(2)
+                .textSelection(.enabled)
+        }
     }
 }
 
@@ -23,75 +101,36 @@ struct GeneralSettingsView: View {
     @Bindable var settings: SettingsStore
     let permissions: PermissionsService
     let client: RephraseClient
-    let updates: UpdateChecker
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
-    @State private var testResult: String?
-    @State private var isTesting = false
-    @State private var updateStatus: String?
-    @State private var updateURL: URL?
-    @State private var isCheckingUpdates = false
 
     var body: some View {
-        Form {
-            Section("Permissions") {
-                if permissions.isTrusted {
-                    Label("Accessibility access granted", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                } else {
-                    HStack {
-                        Label("Accessibility access is required to read and replace selected text",
-                              systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Spacer()
+        SettingsForm {
+            if !permissions.isTrusted {
+                Section {
+                    LabeledContent {
                         Button("Open System Settings") {
                             permissions.requestAccess()
                             permissions.openSystemSettings()
                         }
+                    } label: {
+                        SettingsLabel("Accessibility access needed", symbol: "hand.raised.fill", color: .orange)
+                        Text("Lirnyk reads and replaces the selected text through Accessibility.")
                     }
                 }
             }
-            Section("AI provider") {
-                Picker("Provider", selection: $settings.provider) {
-                    ForEach(AIProvider.allCases) { Text($0.displayName).tag($0) }
+            AISettingsSections(settings: settings, client: client)
+            Section {
+                Toggle(isOn: $launchAtLogin) {
+                    SettingsLabel("Launch at login", symbol: "power", color: .green)
                 }
-                .onChange(of: settings.provider) { testResult = nil }
-                SecureField("\(settings.provider.displayName) API key", text: $settings.apiKey)
-                    .onSubmit { settings.flushAPIKey() }
-                TextField("Model", text: $settings.modelID)
-                HStack {
-                    Link("Get API key", destination: settings.provider.apiKeysURL)
-                    Link("Browse models", destination: settings.provider.modelsURL)
-                    Spacer()
-                    if let testResult {
-                        Text(testResult).foregroundStyle(.secondary).lineLimit(2)
-                    }
-                    Button("Test connection", action: testConnection)
-                        .disabled(isTesting || !settings.hasAPIKey)
-                }
-            }
-            Section("Startup") {
-                Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, enabled in
-                        settings.launchAtLoginWanted = enabled
-                        do { try LaunchAtLogin.set(enabled) } catch { launchAtLogin = LaunchAtLogin.isEnabled }
-                    }
-            }
-            Section("About") {
-                LabeledContent("Version", value: "\(UpdateChecker.currentVersion) (\(UpdateChecker.currentBuild))")
-                HStack {
-                    if let updateURL {
-                        Link(updateStatus ?? "Download", destination: updateURL)
-                    } else if let updateStatus {
-                        Text(updateStatus).foregroundStyle(.secondary).lineLimit(2)
-                    }
-                    Spacer()
-                    Button("Check for Updates", action: checkForUpdates)
-                        .disabled(isCheckingUpdates)
+                .onChange(of: launchAtLogin) { _, enabled in
+                    settings.launchAtLoginWanted = enabled
+                    do { try LaunchAtLogin.set(enabled) } catch { launchAtLogin = LaunchAtLogin.isEnabled }
                 }
             }
         }
-        .formStyle(.grouped)
+        .animation(.default, value: permissions.isTrusted)
         .task {
             while !Task.isCancelled {
                 permissions.refresh()
@@ -99,38 +138,183 @@ struct GeneralSettingsView: View {
             }
         }
     }
+}
 
-    private func checkForUpdates() {
-        isCheckingUpdates = true
-        updateURL = nil
-        updateStatus = "Checking…"
-        Task {
-            defer { isCheckingUpdates = false }
-            do {
-                switch try await updates.check() {
-                case .upToDate:
-                    updateStatus = "✓ Lirnyk is up to date"
-                case let .available(version, url):
-                    updateStatus = "Lirnyk \(version) is available — Download"
-                    updateURL = url
+/// Provider, key, model and connection test; shown as sections of the General pane.
+struct AISettingsSections: View {
+    @Bindable var settings: SettingsStore
+    let client: RephraseClient
+
+    @State private var testStatus: StatusMessage?
+    @State private var showsAPIKey = false
+    @State private var usesCustomModel = false
+
+    private static let customModelTag = "\u{0}custom"
+
+    /// Picker selection: a suggested model ID, or `customModelTag` while a typed-in ID is in use.
+    private var modelChoice: Binding<String> {
+        Binding {
+            usesCustomModel ? Self.customModelTag : settings.modelID
+        } set: { choice in
+            usesCustomModel = choice == Self.customModelTag
+            if !usesCustomModel { settings.modelID = choice }
+        }
+    }
+
+    var body: some View {
+        Group {
+            Section {
+                Picker(selection: $settings.provider) {
+                    ForEach(AIProvider.allCases) { Text($0.displayName).tag($0) }
+                } label: {
+                    SettingsLabel("Provider", symbol: "sparkles", color: .purple)
                 }
+                .onChange(of: settings.provider) {
+                    testStatus = nil
+                    syncCustomModel()
+                }
+                LabeledContent {
+                    HStack(spacing: 6) {
+                        let prompt = Text("Paste your \(settings.provider.displayName) key")
+                        Group {
+                            if showsAPIKey {
+                                TextField("API key", text: $settings.apiKey, prompt: prompt)
+                            } else {
+                                SecureField("API key", text: $settings.apiKey, prompt: prompt)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 240)
+                        .onSubmit { settings.flushAPIKey() }
+                        Button {
+                            showsAPIKey.toggle()
+                        } label: {
+                            Image(systemName: showsAPIKey ? "eye.slash" : "eye")
+                        }
+                        .buttonStyle(.borderless)
+                        .help(showsAPIKey ? "Hide key" : "Show key")
+                    }
+                } label: {
+                    SettingsLabel("API key", symbol: "key.fill", color: .orange)
+                }
+                Picker(selection: modelChoice) {
+                    ForEach(settings.provider.suggestedModelIDs, id: \.self) { Text($0).tag($0) }
+                    Divider()
+                    Text("Custom…").tag(Self.customModelTag)
+                } label: {
+                    SettingsLabel("Model", symbol: "cpu", color: .blue)
+                }
+                if usesCustomModel {
+                    TextField(text: $settings.modelID, prompt: Text("Model ID")) {
+                        Text("Model ID").padding(.leading, 28)
+                    }
+                }
+            } footer: {
+                HStack {
+                    Link("Get API key", destination: settings.provider.apiKeysURL)
+                    Link("Browse models", destination: settings.provider.modelsURL)
+                    Spacer()
+                    Label("Stored in your Keychain", systemImage: "lock.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.callout)
+            }
+            Section {
+                LabeledContent {
+                    Button("Test", action: testConnection)
+                        .disabled(testStatus == .progress("Testing…") || !settings.hasAPIKey)
+                } label: {
+                    SettingsLabel("Connection", symbol: "bolt.horizontal.fill", color: .teal)
+                    if let testStatus {
+                        StatusView(status: testStatus)
+                    } else if !settings.hasAPIKey {
+                        Text("Add an API key to test the connection.")
+                    }
+                }
+            }
+        }
+        .onAppear(perform: syncCustomModel)
+    }
+
+    private func testConnection() {
+        testStatus = .progress("Testing…")
+        Task {
+            do {
+                settings.flushAPIKey()
+                let reply = try await client.rephrase(text: "ping", systemPrompt: "Reply with the single word OK.")
+                testStatus = .success("Connected · \(reply.prefix(40))")
             } catch {
-                updateStatus = "✗ " + ((error as? UpdateCheckError)?.message ?? error.localizedDescription)
+                testStatus = .failure((error as? RephraseError)?.message ?? error.localizedDescription)
             }
         }
     }
 
-    private func testConnection() {
-        isTesting = true
-        testResult = "Testing…"
+    private func syncCustomModel() {
+        usesCustomModel = !settings.provider.suggestedModelIDs.contains(settings.modelID)
+    }
+}
+
+struct AboutSettingsView: View {
+    let updates: UpdateChecker
+
+    private static let repositoryURL = URL(string: "https://github.com/cheyako/lirnyk-app")!
+    private static let changelogURL = URL(string: "https://github.com/cheyako/lirnyk-app/blob/main/CHANGELOG.md")!
+
+    @State private var updateStatus: StatusMessage?
+    @State private var updateURL: URL?
+
+    var body: some View {
+        SettingsForm {
+            Section {
+                VStack(spacing: 6) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 96, height: 96)
+                    Text("Lirnyk")
+                        .font(.title.weight(.semibold))
+                    Text("Version \(UpdateChecker.currentVersion) (\(UpdateChecker.currentBuild))")
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            Section {
+                LabeledContent {
+                    if let updateURL {
+                        Link("Download", destination: updateURL)
+                            .buttonStyle(.borderedProminent)
+                    } else {
+                        Button("Check for Updates", action: checkForUpdates)
+                            .disabled(updateStatus == .progress("Checking…"))
+                    }
+                } label: {
+                    SettingsLabel("Updates", symbol: "arrow.down.circle.fill", color: .blue)
+                    if let updateStatus { StatusView(status: updateStatus) }
+                }
+                Link(destination: Self.changelogURL) {
+                    SettingsLabel("What's new", symbol: "list.bullet.rectangle.fill", color: .indigo)
+                }
+                Link(destination: Self.repositoryURL) {
+                    SettingsLabel("Source on GitHub", symbol: "chevron.left.forwardslash.chevron.right", color: .gray)
+                }
+            }
+        }
+    }
+
+    private func checkForUpdates() {
+        updateStatus = .progress("Checking…")
         Task {
-            defer { isTesting = false }
             do {
-                settings.flushAPIKey()
-                let reply = try await client.rephrase(text: "ping", systemPrompt: "Reply with the single word OK.")
-                testResult = "✓ \(reply.prefix(40))"
+                switch try await updates.check() {
+                case .upToDate:
+                    updateStatus = .success("Lirnyk is up to date")
+                case let .available(version, url):
+                    updateStatus = .success("Lirnyk \(version) is available")
+                    updateURL = url
+                }
             } catch {
-                testResult = "✗ " + ((error as? RephraseError)?.message ?? error.localizedDescription)
+                updateStatus = .failure((error as? UpdateCheckError)?.message ?? error.localizedDescription)
             }
         }
     }
@@ -138,40 +322,69 @@ struct GeneralSettingsView: View {
 
 struct ProfilesSettingsView: View {
     let store: ProfileStore
+    let client: RephraseClient
     @State private var selection: Profile.ID?
+    /// Kept here so the sample survives switching between profiles.
+    @State private var sampleText = ""
+    /// Bumped when a shortcut is recorded, so the list re-reads shortcuts it can't observe.
+    @State private var shortcutRevision = 0
 
     var body: some View {
         HStack(spacing: 0) {
             VStack(spacing: 0) {
                 List(selection: $selection) {
                     ForEach(store.profiles) { profile in
-                        Text(profile.title.isEmpty ? "Untitled" : profile.title).tag(profile.id)
+                        HStack {
+                            Text(profile.title.isEmpty ? "Untitled" : profile.title)
+                                .lineLimit(1)
+                            Spacer()
+                            if let shortcut = KeyboardShortcuts.getShortcut(for: .profile(profile.id)) {
+                                Text(shortcut.description)
+                                    .font(.callout.monospaced())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .tag(profile.id)
                     }
                 }
+                .listStyle(.sidebar)
+                .id(shortcutRevision)
                 Divider()
-                HStack(spacing: 4) {
-                    Button { selection = store.add().id } label: { Image(systemName: "plus") }
+                HStack(spacing: 2) {
+                    Button { selection = store.add().id } label: {
+                        Image(systemName: "plus").frame(width: 20, height: 20)
+                    }
+                    .help("Add profile")
                     Button {
                         guard let selection else { return }
                         store.delete(id: selection)
                         self.selection = store.profiles.first?.id
-                    } label: { Image(systemName: "minus") }
-                        .disabled(selection == nil)
+                    } label: {
+                        Image(systemName: "minus").frame(width: 20, height: 20)
+                    }
+                    .help("Delete profile")
+                    .disabled(selection == nil)
                     Spacer()
                 }
                 .buttonStyle(.borderless)
-                .padding(8)
+                .padding(6)
             }
-            .frame(width: 190)
+            .frame(width: 210)
 
             Divider()
 
             if let id = selection, let profile = store.profiles.first(where: { $0.id == id }) {
-                ProfileEditor(profile: profile, onChange: store.update)
-                    .id(id)
+                ProfileEditor(profile: profile, client: client, sampleText: $sampleText, onChange: store.update) {
+                    shortcutRevision += 1
+                }
+                .id(id)
             } else {
-                ContentUnavailableView("No Profile Selected", systemImage: "text.bubble")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ContentUnavailableView {
+                    Label("No Profile Selected", systemImage: "text.bubble")
+                } description: {
+                    Text("Pick a profile on the left, or add one with +.")
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .onAppear { selection = selection ?? store.profiles.first?.id }
@@ -180,26 +393,88 @@ struct ProfilesSettingsView: View {
 
 struct ProfileEditor: View {
     @State private var profile: Profile
+    let client: RephraseClient
+    @Binding var sampleText: String
     let onChange: (Profile) -> Void
+    let onShortcutChange: () -> Void
 
-    init(profile: Profile, onChange: @escaping (Profile) -> Void) {
+    @State private var tryResult: String?
+    @State private var tryStatus: StatusMessage?
+
+    init(profile: Profile, client: RephraseClient, sampleText: Binding<String>,
+         onChange: @escaping (Profile) -> Void, onShortcutChange: @escaping () -> Void) {
         _profile = State(initialValue: profile)
+        self.client = client
+        _sampleText = sampleText
         self.onChange = onChange
+        self.onShortcutChange = onShortcutChange
     }
 
     var body: some View {
         Form {
-            TextField("Title", text: $profile.title)
-            LabeledContent("Shortcut") {
-                KeyboardShortcuts.Recorder(for: .profile(profile.id))
+            Section {
+                TextField(text: $profile.title, prompt: Text("Profile name")) {
+                    SettingsLabel("Title", symbol: "textformat", color: .blue)
+                }
+                LabeledContent {
+                    KeyboardShortcuts.Recorder(for: .profile(profile.id)) { _ in onShortcutChange() }
+                } label: {
+                    SettingsLabel("Shortcut", symbol: "command", color: .gray)
+                }
             }
-            Section("Prompt (sent as the system prompt)") {
+            Section {
                 TextEditor(text: $profile.prompt)
                     .font(.body)
-                    .frame(minHeight: 220)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 140)
+            } header: {
+                Text("Prompt")
+            } footer: {
+                Text("Sent to the model as the system prompt, followed by your selected text.")
+            }
+            Section {
+                TextEditor(text: $sampleText)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 60)
+                    .overlay(alignment: .topLeading) {
+                        if sampleText.isEmpty {
+                            Text("Paste sample text…")
+                                .foregroundStyle(.tertiary)
+                                .padding(.leading, 5)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                LabeledContent {
+                    Button("Rewrite", action: tryProfile)
+                        .disabled(tryStatus == .progress("Rewriting…")
+                            || sampleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                } label: {
+                    if let tryStatus { StatusView(status: tryStatus) }
+                }
+                if let tryResult {
+                    Text(tryResult)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } header: {
+                Text("Try it")
             }
         }
         .formStyle(.grouped)
         .onChange(of: profile) { _, updated in onChange(updated) }
+    }
+
+    private func tryProfile() {
+        tryStatus = .progress("Rewriting…")
+        tryResult = nil
+        Task {
+            do {
+                tryResult = try await client.rephrase(text: sampleText, systemPrompt: profile.prompt)
+                tryStatus = nil
+            } catch {
+                tryStatus = .failure((error as? RephraseError)?.message ?? error.localizedDescription)
+            }
+        }
     }
 }
