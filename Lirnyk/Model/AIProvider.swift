@@ -26,6 +26,16 @@ nonisolated enum AIProvider: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Offered in the Model picker, default first; any other ID can still be typed as a custom model.
+    var suggestedModelIDs: [String] {
+        switch self {
+        case .openRouter: [defaultModelID, "anthropic/claude-haiku-5.5", "google/gemini-3.8-flash", "openai/gpt-6.1-terra", "anthropic/claude-sonnet-5.5"]
+        case .openAI: [defaultModelID, "gpt-5.4-nano", "gpt-5.4-mini", "gpt-5.5", "gpt-6.1-terra"]
+        case .anthropic: [defaultModelID, "claude-sonnet-5-5", "claude-opus-5-5"]
+        case .gemini: [defaultModelID, "gemini-3.5-flash-lite", "gemini-3.8-flash"]
+        }
+    }
+
     /// Keychain account for the provider's API key; `openrouter` predates multi-provider support.
     var keychainAccount: String { rawValue }
 
