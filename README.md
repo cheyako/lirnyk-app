@@ -1,6 +1,6 @@
 # Lirnyk
 
-macOS menu-bar app that rephrases the selected text in any app with AI: [OpenRouter](https://openrouter.ai), OpenAI, Anthropic or Gemini.
+macOS menu-bar app that rephrases the selected text in any app with AI: [OpenRouter](https://openrouter.ai), OpenAI, Anthropic, Gemini, or a local model through [Ollama](https://ollama.com).
 Select text, press a profile hotkey, and the selection is replaced with the rewritten text. ⌘Z undoes it.
 
 ## How it works
@@ -20,7 +20,7 @@ The app has no Dock icon. It starts at login by default.
 ## Requirements
 - macOS 14+
 - Xcode 26, XcodeGen (`brew install xcodegen`)
-- An API key for OpenRouter, OpenAI, Anthropic or Gemini
+- An API key for OpenRouter, OpenAI, Anthropic or Gemini, or [Ollama](https://ollama.com) running locally
 
 ## Build & run
     make test      # unit tests
@@ -33,16 +33,21 @@ The app has no Dock icon. It starts at login by default.
 `Lirnyk.xcodeproj` is generated from `project.yml`. Every make target regenerates it, so edit `project.yml`, not the project.
 
 On first launch grant **Accessibility** (System Settings → Privacy & Security → Accessibility),
-then pick a provider and enter its API key in Settings.
+then pick a provider and enter its API key in Settings. With Ollama, pick a model you've pulled (`ollama pull llama3.2`).
 
 ## Settings
-- **General**: Accessibility status, AI provider (OpenRouter, OpenAI, Anthropic or Gemini), the provider's
-  API key (stored in the Keychain) and model ID (one model for all profiles), launch at login, and *Test connection*.
+- **General**: AI provider (OpenRouter, OpenAI, Anthropic, Gemini or Ollama), the provider's API key
+  (stored in the Keychain) and model (one model for all profiles, picked from a list or typed), *Test*, and launch at login.
   Each provider keeps its own key and model, so switching back and forth loses nothing.
-  Default models: OpenRouter `openai/gpt-4o-mini`, OpenAI `gpt-4.1-mini`, Anthropic `claude-haiku-5-5`, Gemini `gemini-2.5-flash`.
-- **Profiles**: add, remove and edit profiles.
-- **About** (in General): the installed version and *Check for Updates*, which compares it with the latest
-  [GitHub release](https://github.com/cheyako/lirnyk-app/releases) and links to the download when a newer one exists.
+  A warning about Accessibility appears at the top only while access is missing.
+  Default models: OpenRouter `openai/gpt-4o-mini`, OpenAI `gpt-4.1-mini`, Anthropic `claude-haiku-5-5`, Gemini `gemini-2.5-flash`,
+  Ollama `llama3.2:latest`.
+- **Ollama** needs no key. Set the server address (default `http://localhost:11434`); the model list shows the models
+  installed on that server. Requests to Ollama time out after 120 seconds, since a model may need to load first.
+- **Profiles**: add, remove and edit profiles, and try a prompt on sample text.
+- **About**: the installed version, *Check for Updates* and *Check automatically* (on by default: shortly after launch,
+  then once a day). When the latest [GitHub release](https://github.com/cheyako/lirnyk-app/releases) is newer,
+  the menu bar menu and About link to it.
 
 ## Versioning and releases
 The version lives in `project.yml`: `MARKETING_VERSION` (shown in Settings, used for the DMG name and the `vX.Y.Z`

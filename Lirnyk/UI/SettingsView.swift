@@ -148,6 +148,9 @@ struct AISettingsSections: View {
     @State private var testStatus: StatusMessage?
     @State private var showsAPIKey = false
     @State private var usesCustomModel = false
+    /// Models installed on the Ollama server; nil until loaded.
+    @State private var ollamaModels: [String]?
+    @State private var ollamaError: String?
 
     private static let customModelTag = "\u{0}custom"
 
@@ -159,6 +162,10 @@ struct AISettingsSections: View {
             usesCustomModel = choice == Self.customModelTag
             if !usesCustomModel { settings.modelID = choice }
         }
+    }
+
+    private var modelOptions: [String] {
+        settings.provider == .ollama ? ollamaModels ?? [] : settings.provider.suggestedModelIDs
     }
 
     var body: some View {
@@ -173,36 +180,22 @@ struct AISettingsSections: View {
                     testStatus = nil
                     syncCustomModel()
                 }
-                LabeledContent {
-                    HStack(spacing: 6) {
-                        let prompt = Text("Paste your \(settings.provider.displayName) key")
-                        Group {
-                            if showsAPIKey {
-                                TextField("API key", text: $settings.apiKey, prompt: prompt)
-                            } else {
-                                SecureField("API key", text: $settings.apiKey, prompt: prompt)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: 240)
-                        .onSubmit { settings.flushAPIKey() }
-                        Button {
-                            showsAPIKey.toggle()
-                        } label: {
-                            Image(systemName: showsAPIKey ? "eye.slash" : "eye")
-                        }
-                        .buttonStyle(.borderless)
-                        .help(showsAPIKey ? "Hide key" : "Show key")
+                if settings.provider.requiresAPIKey {
+                    apiKeyRow
+                } else {
+                    TextField(text: $settings.ollamaServer, prompt: Text(AIProvider.defaultOllamaServer)) {
+                        SettingsLabel("Server", symbol: "server.rack", color: .gray)
                     }
-                } label: {
-                    SettingsLabel("API key", symbol: "key.fill", color: .orange)
                 }
                 Picker(selection: modelChoice) {
-                    ForEach(settings.provider.suggestedModelIDs, id: \.self) { Text($0).tag($0) }
-                    Divider()
+                    ForEach(modelOptions, id: \.self) { Text($0).tag($0) }
+                    if !modelOptions.isEmpty { Divider() }
                     Text("Custom…").tag(Self.customModelTag)
                 } label: {
                     SettingsLabel("Model", symbol: "cpu", color: .blue)
+                    if settings.provider == .ollama, let ollamaError {
+                        Text(ollamaError).foregroundStyle(.red)
+                    }
                 }
                 if usesCustomModel {
                     TextField(text: $settings.modelID, prompt: Text("Model ID")) {
@@ -211,29 +204,84 @@ struct AISettingsSections: View {
                 }
             } footer: {
                 HStack {
-                    Link("Get API key", destination: settings.provider.apiKeysURL)
+                    if settings.provider.requiresAPIKey {
+                        Link("Get API key", destination: settings.provider.apiKeysURL)
+                    } else {
+                        Link("Download Ollama", destination: settings.provider.apiKeysURL)
+                    }
                     Link("Browse models", destination: settings.provider.modelsURL)
                     Spacer()
-                    Label("Stored in your Keychain", systemImage: "lock.fill")
-                        .foregroundStyle(.secondary)
+                    if settings.provider.requiresAPIKey {
+                        Label("Stored in your Keychain", systemImage: "lock.fill")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Label("Runs on your Mac, no key needed", systemImage: "desktopcomputer")
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .font(.callout)
             }
             Section {
                 LabeledContent {
                     Button("Test", action: testConnection)
-                        .disabled(testStatus == .progress("Testing…") || !settings.hasAPIKey)
+                        .disabled(testStatus == .progress("Testing…") || !settings.isConfigured)
                 } label: {
                     SettingsLabel("Connection", symbol: "bolt.horizontal.fill", color: .teal)
                     if let testStatus {
                         StatusView(status: testStatus)
-                    } else if !settings.hasAPIKey {
+                    } else if !settings.isConfigured {
                         Text("Add an API key to test the connection.")
                     }
                 }
             }
         }
         .onAppear(perform: syncCustomModel)
+        .task(id: "\(settings.provider.rawValue) \(settings.ollamaServer)") { await loadOllamaModels() }
+    }
+
+    private var apiKeyRow: some View {
+        LabeledContent {
+            HStack(spacing: 6) {
+                let prompt = Text("Paste your \(settings.provider.displayName) key")
+                Group {
+                    if showsAPIKey {
+                        TextField("API key", text: $settings.apiKey, prompt: prompt)
+                    } else {
+                        SecureField("API key", text: $settings.apiKey, prompt: prompt)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 240)
+                .onSubmit { settings.flushAPIKey() }
+                Button {
+                    showsAPIKey.toggle()
+                } label: {
+                    Image(systemName: showsAPIKey ? "eye.slash" : "eye")
+                }
+                .buttonStyle(.borderless)
+                .help(showsAPIKey ? "Hide key" : "Show key")
+            }
+        } label: {
+            SettingsLabel("API key", symbol: "key.fill", color: .orange)
+        }
+    }
+
+    /// Reads the installed models whenever Ollama is selected or its address changes (debounced while typing).
+    private func loadOllamaModels() async {
+        guard settings.provider == .ollama else { return }
+        try? await Task.sleep(for: .milliseconds(400))
+        guard !Task.isCancelled else { return }
+        do {
+            let models = try await OllamaModels.installed(server: settings.ollamaServer)
+            guard !Task.isCancelled else { return }
+            ollamaModels = models
+            ollamaError = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            ollamaModels = nil
+            ollamaError = (error as? RephraseError)?.message ?? error.localizedDescription
+        }
+        syncCustomModel()
     }
 
     private func testConnection() {
@@ -250,7 +298,7 @@ struct AISettingsSections: View {
     }
 
     private func syncCustomModel() {
-        usesCustomModel = !settings.provider.suggestedModelIDs.contains(settings.modelID)
+        usesCustomModel = !modelOptions.contains(settings.modelID)
     }
 }
 

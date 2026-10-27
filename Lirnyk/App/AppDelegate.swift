@@ -18,14 +18,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }()
 
     lazy var client: AIClient = AIClient { [settings] in
-        (provider: settings.provider, apiKey: settings.apiKey, model: settings.modelID)
+        (provider: settings.provider, apiKey: settings.apiKey, model: settings.modelID, server: settings.ollamaServer)
     }
 
     lazy var coordinator: RephraseCoordinator = {
         let coordinator = RephraseCoordinator(
             selection: ClipboardSelectionService(), client: client, accessibility: permissions,
             focus: WorkspaceFocusTracker(), feedback: hud, cancelKey: EscKeyMonitor(),
-            hasAPIKey: { [settings] in settings.hasAPIKey })
+            hasAPIKey: { [settings] in settings.isConfigured })
         coordinator.openSettings = { [weak self] in self?.openSettings() }
         coordinator.onBusyChanged = { [appState] in appState.setBusy($0) }
         return coordinator
@@ -46,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         LaunchAtLogin.syncOnLaunch(wanted: settings.launchAtLoginWanted)
         updates.start()
-        if !permissions.checkTrusted() || !settings.hasAPIKey {
+        if !permissions.checkTrusted() || !settings.isConfigured {
             openSettings()
         }
     }

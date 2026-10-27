@@ -5,6 +5,16 @@ User-facing changes in each Lirnyk release, newest first. Add entries under **Un
 
 ## Unreleased
 
+### New
+- **Ollama support**: choose *Ollama (local)* to rewrite text with a model running on your Mac. No API key needed.
+  The model list shows what you've pulled; the server address can point to another machine on your network.
+- **Redesigned Settings** with General, Profiles and About tabs. Accessibility only appears when it needs attention.
+- **Pick a model from a list** of suggested models for each provider, or type a custom one.
+- **Show or hide the API key** while you type it.
+- **Try a profile in Settings**: paste sample text under the prompt and see the rewrite straight away.
+- **Automatic update checks** once a day. A newer release shows in the menu bar menu and in About;
+  turn it off in About.
+
 ## 0.2.0 — 2026-10-27
 
 Lirnyk 0.2.0 adds more AI providers and an update check.

@@ -4,20 +4,25 @@ protocol RephraseClient: AnyObject {
     func rephrase(text: String, systemPrompt: String) async throws -> String
 }
 
-/// Talks to the selected provider: OpenRouter, OpenAI and Gemini through the OpenAI-compatible
+/// Talks to the selected provider: OpenRouter, OpenAI, Gemini and Ollama through the OpenAI-compatible
 /// chat completions API, Anthropic through its Messages API.
 final class AIClient: RephraseClient {
-    typealias Credentials = (provider: AIProvider, apiKey: String, model: String)
+    /// `server` is the Ollama server address; other providers ignore it.
+    typealias Credentials = (provider: AIProvider, apiKey: String, model: String, server: String)
 
     static let anthropicVersion = "2023-06-01"
     static let anthropicMaxTokens = 8192
+    /// Local models can take a while to load into memory on first use.
+    static let ollamaTimeout: TimeInterval = 120
 
-    static func endpoint(for provider: AIProvider) -> URL {
+    /// Nil only for an Ollama server address that isn't a URL.
+    static func endpoint(for provider: AIProvider, server: String = AIProvider.defaultOllamaServer) -> URL? {
         switch provider {
         case .openRouter: URL(string: "https://openrouter.ai/api/v1/chat/completions")!
         case .openAI: URL(string: "https://api.openai.com/v1/chat/completions")!
         case .anthropic: URL(string: "https://api.anthropic.com/v1/messages")!
         case .gemini: URL(string: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")!
+        case .ollama: AIProvider.ollamaBaseURL(server)?.appending(path: "v1/chat/completions")
         }
     }
 
@@ -30,12 +35,13 @@ final class AIClient: RephraseClient {
     }
 
     func rephrase(text: String, systemPrompt: String) async throws -> String {
-        let (provider, rawKey, model) = credentials()
+        let (provider, rawKey, model, server) = credentials()
         let apiKey = rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !apiKey.isEmpty else { throw RephraseError.missingAPIKey }
+        guard !apiKey.isEmpty || !provider.requiresAPIKey else { throw RephraseError.missingAPIKey }
+        guard let url = Self.endpoint(for: provider, server: server) else { throw RephraseError.invalidServer(server) }
         let system = systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : systemPrompt
 
-        var request = URLRequest(url: Self.endpoint(for: provider), timeoutInterval: 30)
+        var request = URLRequest(url: url, timeoutInterval: provider == .ollama ? Self.ollamaTimeout : 30)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -46,8 +52,8 @@ final class AIClient: RephraseClient {
             request.httpBody = try JSONEncoder().encode(MessagesRequest(
                 model: model, maxTokens: Self.anthropicMaxTokens, system: system,
                 messages: [ChatMessage(role: "user", content: text)]))
-        case .openRouter, .openAI, .gemini:
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        case .openRouter, .openAI, .gemini, .ollama:
+            if provider.requiresAPIKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
             if provider == .openRouter { request.setValue("Lirnyk", forHTTPHeaderField: "X-Title") }
             var messages: [ChatMessage] = []
             if let system { messages.append(ChatMessage(role: "system", content: system)) }
@@ -55,20 +61,22 @@ final class AIClient: RephraseClient {
             request.httpBody = try JSONEncoder().encode(ChatRequest(model: model, messages: messages))
         }
 
-        let (data, status) = try await send(request)
+        let (data, status) = try await send(request, to: provider)
         let content = switch provider {
         case .anthropic: try Self.parseMessages(data, status: status)
-        case .openRouter, .openAI, .gemini: try Self.parseChat(data, status: status)
+        case .openRouter, .openAI, .gemini, .ollama: try Self.parseChat(data, status: status)
         }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw RephraseError.emptyResponse }
         return trimmed
     }
 
-    private func send(_ request: URLRequest) async throws -> (Data, Int) {
+    private func send(_ request: URLRequest, to provider: AIProvider) async throws -> (Data, Int) {
         do {
             let (data, response) = try await session.data(for: request)
             return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+        } catch let error as URLError where provider == .ollama && OllamaModels.isUnreachable(error) {
+            throw RephraseError.ollamaUnreachable(OllamaModels.serverName(request.url))
         } catch let error as URLError where error.code == .timedOut {
             throw RephraseError.timeout
         } catch let error as URLError where error.code == .cancelled {
@@ -132,6 +140,44 @@ final class AIClient: RephraseClient {
             .components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
         return .server(status: status, message: "unexpected response: \(body.isEmpty ? "(empty body)" : body)")
     }
+}
+
+/// Lists the models installed on an Ollama server.
+enum OllamaModels {
+    static func installed(server: String, session: URLSession = .shared) async throws -> [String] {
+        guard let url = AIProvider.ollamaBaseURL(server)?.appending(path: "api/tags") else {
+            throw RephraseError.invalidServer(server)
+        }
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: URLRequest(url: url, timeoutInterval: 5))
+        } catch let error as URLError where isUnreachable(error) || error.code == .timedOut {
+            throw RephraseError.ollamaUnreachable(serverName(url))
+        } catch {
+            throw RephraseError.network(error.localizedDescription)
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status), let tags = try? JSONDecoder().decode(OllamaTags.self, from: data) else {
+            throw RephraseError.server(status: status, message: "unexpected response from Ollama")
+        }
+        return tags.models.map(\.name).sorted()
+    }
+
+    static func isUnreachable(_ error: URLError) -> Bool {
+        [.cannotConnectToHost, .cannotFindHost, .networkConnectionLost, .notConnectedToInternet].contains(error.code)
+    }
+
+    /// "localhost:11434" for messages.
+    static func serverName(_ url: URL?) -> String {
+        guard let host = url?.host() else { return "the server" }
+        return url?.port.map { "\(host):\($0)" } ?? host
+    }
+}
+
+private nonisolated struct OllamaTags: Decodable {
+    struct Model: Decodable { let name: String }
+    let models: [Model]
 }
 
 private nonisolated struct ChatMessage: Encodable {

@@ -5,6 +5,7 @@ import Observation
 final class SettingsStore {
     private static let providerKey = "provider"
     private static let launchAtLoginWantedKey = "launchAtLoginWanted"
+    private static let ollamaServerKey = "ollamaServer"
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let keychain: SecretStoring
@@ -37,8 +38,18 @@ final class SettingsStore {
         didSet { defaults.set(launchAtLoginWanted, forKey: Self.launchAtLoginWantedKey) }
     }
 
+    /// Address of the Ollama server, as typed.
+    var ollamaServer: String {
+        didSet { defaults.set(ollamaServer, forKey: Self.ollamaServerKey) }
+    }
+
     var hasAPIKey: Bool {
         !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Ready to send requests: a key is present, or the provider doesn't need one.
+    var isConfigured: Bool {
+        !provider.requiresAPIKey || hasAPIKey
     }
 
     init(defaults: UserDefaults = .standard,
@@ -53,6 +64,7 @@ final class SettingsStore {
         persistedAPIKey = keychain.read(account: provider.keychainAccount) ?? ""
         apiKey = persistedAPIKey
         launchAtLoginWanted = defaults.object(forKey: Self.launchAtLoginWantedKey) as? Bool ?? true
+        ollamaServer = defaults.string(forKey: Self.ollamaServerKey) ?? AIProvider.defaultOllamaServer
     }
 
     /// Writes a pending API key change to the Keychain immediately.

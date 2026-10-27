@@ -9,7 +9,7 @@ extension NetworkTests {
         init() {
             StubURLProtocol.reset()
             client = AIClient(session: StubURLProtocol.makeSession()) {
-                (provider: .openRouter, apiKey: " sk-or-123 ", model: "openai/gpt-4o-mini")
+                (provider: .openRouter, apiKey: " sk-or-123 ", model: "openai/gpt-4o-mini", server: "")
             }
         }
 
@@ -53,7 +53,7 @@ extension NetworkTests {
         }
 
         @Test func missingKeyThrowsWithoutNetwork() async {
-            let noKey = AIClient(session: StubURLProtocol.makeSession()) { (provider: .openAI, apiKey: "  ", model: "m") }
+            let noKey = AIClient(session: StubURLProtocol.makeSession()) { (provider: .openAI, apiKey: "  ", model: "m", server: "") }
             StubURLProtocol.handler = { _ in (200, Self.success("ok")) }
 
             await #expect(throws: RephraseError.missingAPIKey) {
@@ -160,7 +160,7 @@ extension NetworkTests.AIClientTests {
 
 extension NetworkTests.AIClientTests {
     static func client(_ provider: AIProvider, model: String = "m") -> AIClient {
-        AIClient(session: StubURLProtocol.makeSession()) { (provider: provider, apiKey: "key-1", model: model) }
+        AIClient(session: StubURLProtocol.makeSession()) { (provider: provider, apiKey: "key-1", model: model, server: "") }
     }
 
     @Test(arguments: [
