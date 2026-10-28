@@ -29,6 +29,7 @@ struct MenuContent: View {
         }
         Button("Settings…", action: openSettings)
             .keyboardShortcut(",")
+        Button("Support Lirnyk…") { NSWorkspace.shared.open(AboutSettingsView.donateURL) }
         Button("Quit Lirnyk") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }

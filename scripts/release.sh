@@ -91,9 +91,11 @@ main() {
   notarize "$dmg"
   xcrun stapler staple "$dmg"
   spctl --assess --type open --context context:primary-signature --verbose "$dmg"
+  # Same file under a fixed name, so releases/latest/download/Lirnyk.dmg always gets the newest version.
+  cp "$dmg" "$OUT/Lirnyk.dmg"
 
   release_notes "$version" CHANGELOG.md "$dmg" > "$OUT/notes-$version.md"
-  echo "Done: $dmg"
+  echo "Done: $dmg (and $OUT/Lirnyk.dmg)"
   echo "Release notes: $OUT/notes-$version.md"
 }
 

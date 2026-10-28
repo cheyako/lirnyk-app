@@ -307,7 +307,7 @@ struct AboutSettingsView: View {
 
     private static let repositoryURL = URL(string: "https://github.com/cheyako/lirnyk-app")!
     private static let changelogURL = URL(string: "https://github.com/cheyako/lirnyk-app/blob/main/CHANGELOG.md")!
-    private static let donateURL = URL(string: "https://ko-fi.com/cheyako")!
+    static let donateURL = URL(string: "https://ko-fi.com/cheyako")!
 
     @State private var updateStatus: StatusMessage?
 

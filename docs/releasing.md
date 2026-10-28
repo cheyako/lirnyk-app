@@ -49,6 +49,9 @@ This refuses to start if `CHANGELOG.md` has no entries for the version, then arc
 staples, and writes:
 
 - `build/release/Lirnyk-0.3.0.dmg` — the file to publish
+- `build/release/Lirnyk.dmg` — the same file under a fixed name, also published, so
+  `https://github.com/cheyako/lirnyk-app/releases/latest/download/Lirnyk.dmg` (used by the website) always gets
+  the newest version
 - `build/release/notes-0.3.0.md` — the release notes: the changelog section, install steps and the DMG's SHA-256
 
 After fixing the changelog, `make notes` regenerates the notes without rebuilding. Check the DMG once by
@@ -71,14 +74,14 @@ On https://github.com/cheyako/lirnyk-app/releases/new:
 - **Tag:** `v0.3.0`
 - **Title:** `Lirnyk 0.3.0`
 - **Description:** the contents of `build/release/notes-0.3.0.md`
-- **Attach:** `build/release/Lirnyk-0.3.0.dmg`
+- **Attach:** `build/release/Lirnyk-0.3.0.dmg` and `build/release/Lirnyk.dmg`
 - Leave **Set as a pre-release** unchecked (pre-releases are invisible to _Check for Updates_) and keep
   **Set as the latest release** checked.
 
 Or with the GitHub CLI, logged in as an account that can publish to `cheyako/lirnyk-app`:
 
 ```
-gh release create v0.3.0 build/release/Lirnyk-0.3.0.dmg --repo cheyako/lirnyk-app \
+gh release create v0.3.0 build/release/Lirnyk-0.3.0.dmg build/release/Lirnyk.dmg --repo cheyako/lirnyk-app \
   --title "Lirnyk 0.3.0" --notes-file build/release/notes-0.3.0.md
 ```
 

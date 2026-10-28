@@ -89,7 +89,8 @@ One-time:
 2. `xcrun notarytool store-credentials lirnyk-notary --apple-id <apple-id> --team-id 2S5U65Y5CZ`
    (use an app-specific password).
 
-Then: `make release` → `build/release/Lirnyk-<version>.dmg`.
+Then: `make release` → `build/release/Lirnyk-<version>.dmg`, plus the same file as `Lirnyk.dmg` for the stable
+`releases/latest/download/Lirnyk.dmg` link.
 The script picks the single valid *Developer ID Application* certificate for team 2S5U65Y5CZ; if you have
 several, set `SIGN_IDENTITY=<SHA-1>`. A rejected notarization prints Apple's log and stops.
 Bump `MARKETING_VERSION` in `project.yml` per release.
@@ -102,6 +103,10 @@ to Apple. Fine for your own Macs; others must allow it via System Settings → P
 
 ## Support
 Lirnyk is free. If it saves you time, you can [buy me a coffee on Ko-fi](https://ko-fi.com/cheyako) ☕
+The app links there too: *Support Lirnyk…* in the menu-bar menu and in Settings → About.
+
+## Contributing
+Bug reports and small fixes are welcome. Larger pull requests need a CLA. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 Lirnyk is free software under the [GNU General Public License v3.0](LICENSE).
