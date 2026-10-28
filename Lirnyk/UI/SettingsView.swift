@@ -413,6 +413,8 @@ struct ProfilesSettingsView: View {
                     }
                 }
                 .listStyle(.sidebar)
+                // Outside a split view the sidebar material is a flat grey slab; use the window background instead.
+                .scrollContentBackground(.hidden)
                 .id(shortcutRevision)
                 Divider()
                 HStack(spacing: 2) {
