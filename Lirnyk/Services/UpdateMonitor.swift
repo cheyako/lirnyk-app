@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Checks GitHub for a newer release in the background and remembers what it found.
-/// Background checks stay silent on errors; manual checks from Settings report them.
+/// Background checks stay silent on errors and are counted; manual checks from Settings report errors and aren't.
 @Observable
 final class UpdateMonitor {
     private static let automaticKey = "checksForUpdatesAutomatically"
@@ -22,13 +22,14 @@ final class UpdateMonitor {
     }
 
     @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let fetch: () async throws -> UpdateCheckResult
+    /// Takes whether the check may be counted (automatic checks only).
+    @ObservationIgnored private let fetch: (_ counted: Bool) async throws -> UpdateCheckResult
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var loop: Task<Void, Never>?
 
     init(defaults: UserDefaults = .standard,
          now: @escaping () -> Date = Date.init,
-         fetch: @escaping () async throws -> UpdateCheckResult) {
+         fetch: @escaping (_ counted: Bool) async throws -> UpdateCheckResult) {
         self.defaults = defaults
         self.now = now
         self.fetch = fetch
@@ -55,13 +56,17 @@ final class UpdateMonitor {
     func checkIfDue() async {
         let lastCheck = defaults.object(forKey: Self.lastCheckKey) as? Date
         guard checksAutomatically, Self.isCheckDue(lastCheck: lastCheck, now: now()) else { return }
-        _ = try? await check()
+        _ = try? await check(counted: true)
     }
 
     /// Runs a check now and records its outcome; errors are thrown to the caller.
     @discardableResult
     func check() async throws -> UpdateCheckResult {
-        let result = try await fetch()
+        try await check(counted: false)
+    }
+
+    private func check(counted: Bool) async throws -> UpdateCheckResult {
+        let result = try await fetch(counted)
         defaults.set(now(), forKey: Self.lastCheckKey)
         switch result {
         case .upToDate: available = nil

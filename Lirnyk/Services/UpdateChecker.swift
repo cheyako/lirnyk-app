@@ -47,8 +47,11 @@ nonisolated enum UpdateCheckError: Error, Equatable, Sendable {
 }
 
 /// Compares the running version with the latest GitHub release.
+/// Counted checks ask lirnyk.app first, which counts them anonymously (app and macOS version only) and answers
+/// with the same fields as GitHub; when it fails, they ask GitHub directly.
 final class UpdateChecker {
     static let latestReleaseURL = URL(string: "https://api.github.com/repos/cheyako/lirnyk-app/releases/latest")!
+    static let countedLatestURL = URL(string: "https://lirnyk.app/api/latest")!
 
     static var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
@@ -60,14 +63,29 @@ final class UpdateChecker {
 
     private let session: URLSession
     private let currentVersion: String
+    private let osMajorVersion: Int
 
-    init(session: URLSession = .shared, currentVersion: String = UpdateChecker.currentVersion) {
+    init(session: URLSession = .shared, currentVersion: String = UpdateChecker.currentVersion,
+         osMajorVersion: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion) {
         self.session = session
         self.currentVersion = currentVersion
+        self.osMajorVersion = osMajorVersion
     }
 
-    func check() async throws -> UpdateCheckResult {
-        var request = URLRequest(url: Self.latestReleaseURL, timeoutInterval: 15)
+    func check(counted: Bool = false) async throws -> UpdateCheckResult {
+        if counted, let result = try? await check(url: countedURL) { return result }
+        return try await check(url: Self.latestReleaseURL)
+    }
+
+    var countedURL: URL {
+        Self.countedLatestURL.appending(queryItems: [
+            URLQueryItem(name: "v", value: currentVersion),
+            URLQueryItem(name: "os", value: String(osMajorVersion)),
+        ])
+    }
+
+    private func check(url: URL) async throws -> UpdateCheckResult {
+        var request = URLRequest(url: url, timeoutInterval: 15)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
 
         let data: Data

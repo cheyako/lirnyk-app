@@ -50,6 +50,10 @@ then pick a provider and enter its API key in Settings. With Ollama, pick a mode
 - **About**: the installed version, *Check for Updates* and *Check automatically* (on by default: shortly after launch,
   then once a day). When the latest [GitHub release](https://github.com/cheyako/lirnyk-app/releases) is newer,
   the menu bar menu and About link to it.
+  The automatic check asks `lirnyk.app` and sends only the Lirnyk version and the macOS major version; we count these
+  checks per day, nothing else (no user ID, no cookies, no stored IPs). If `lirnyk.app` doesn't answer, Lirnyk asks
+  GitHub directly. *Check for Updates* always asks GitHub and isn't counted, and turning the automatic check off
+  stops the counting. See the [privacy page](https://lirnyk.app/privacy).
 
 ## Versioning and releases
 The version lives in `project.yml`: `MARKETING_VERSION` (shown in Settings, used for the DMG name and the `vX.Y.Z`

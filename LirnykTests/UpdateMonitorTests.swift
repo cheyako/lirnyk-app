@@ -16,16 +16,16 @@ struct UpdateMonitorTests {
     @Test func automaticCheckRecordsAvailableUpdateOncePerDay() async throws {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
-        var fetches = 0
-        let monitor = UpdateMonitor(defaults: defaults) {
-            fetches += 1
+        var fetches: [Bool] = []
+        let monitor = UpdateMonitor(defaults: defaults) { counted in
+            fetches.append(counted)
             return .available(version: "9.0.0", url: Self.release)
         }
 
         await monitor.checkIfDue()
         await monitor.checkIfDue()
 
-        #expect(fetches == 1)
+        #expect(fetches == [true])
         #expect(monitor.available == UpdateMonitor.Update(version: "9.0.0", url: Self.release))
     }
 
@@ -33,7 +33,7 @@ struct UpdateMonitorTests {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         var fetches = 0
-        let monitor = UpdateMonitor(defaults: defaults) {
+        let monitor = UpdateMonitor(defaults: defaults) { _ in
             fetches += 1
             return .upToDate
         }
@@ -43,14 +43,14 @@ struct UpdateMonitorTests {
         await monitor.checkIfDue()
 
         #expect(fetches == 0)
-        #expect(!UpdateMonitor(defaults: defaults) { .upToDate }.checksAutomatically)
+        #expect(!UpdateMonitor(defaults: defaults) { _ in .upToDate }.checksAutomatically)
     }
 
     @Test func automaticCheckSwallowsErrorsAndRetriesLater() async throws {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         var fetches = 0
-        let monitor = UpdateMonitor(defaults: defaults) {
+        let monitor = UpdateMonitor(defaults: defaults) { _ in
             fetches += 1
             throw UpdateCheckError.server(status: 503)
         }
@@ -60,5 +60,19 @@ struct UpdateMonitorTests {
 
         #expect(fetches == 2)
         #expect(monitor.available == nil)
+    }
+
+    @Test func manualCheckIsNotCounted() async throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        var fetches: [Bool] = []
+        let monitor = UpdateMonitor(defaults: defaults) { counted in
+            fetches.append(counted)
+            return .upToDate
+        }
+
+        try await monitor.check()
+
+        #expect(fetches == [false])
     }
 }

@@ -13,7 +13,8 @@ User-facing changes in each Lirnyk release, newest first. Add entries under **Un
 - **Show or hide the API key** while you type it.
 - **Try a profile in Settings**: paste sample text under the prompt and see the rewrite straight away.
 - **Automatic update checks** once a day. A newer release shows in the menu bar menu and in About;
-  turn it off in About.
+  turn it off in About. These daily checks go to lirnyk.app, which counts them anonymously (only the app and macOS
+  version are sent; see the [privacy page](https://lirnyk.app/privacy)).
 - **Support Lirnyk** on Ko-fi from Settings → About or the menu-bar menu.
 
 ## 0.2.0 — 2026-10-27

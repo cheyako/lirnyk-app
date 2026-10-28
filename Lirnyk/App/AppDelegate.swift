@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hud = HUDController()
     let updates: UpdateMonitor = {
         let checker = UpdateChecker()
-        return UpdateMonitor { try await checker.check() }
+        return UpdateMonitor { counted in try await checker.check(counted: counted) }
     }()
 
     lazy var client: AIClient = AIClient { [settings] in

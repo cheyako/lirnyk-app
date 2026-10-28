@@ -28,7 +28,7 @@ extension NetworkTests {
         init() { StubURLProtocol.reset() }
 
         static func checker(current: String) -> UpdateChecker {
-            UpdateChecker(session: StubURLProtocol.makeSession(), currentVersion: current)
+            UpdateChecker(session: StubURLProtocol.makeSession(), currentVersion: current, osMajorVersion: 15)
         }
 
         static func release(_ tag: String) -> Data {
@@ -66,6 +66,38 @@ extension NetworkTests {
             StubURLProtocol.handler = { _ in (200, Data(body.utf8)) }
             await #expect(throws: UpdateCheckError.badResponse) {
                 try await Self.checker(current: "0.2.0").check()
+            }
+        }
+
+        @Test func countedCheckAsksLirnykWithVersionsOnly() async throws {
+            StubURLProtocol.handler = { _ in (200, Self.release("v0.3.0")) }
+
+            let result = try await Self.checker(current: "0.2.0").check(counted: true)
+
+            #expect(result == .available(
+                version: "0.3.0", url: URL(string: "https://github.com/cheyako/lirnyk-app/releases/tag/v0.3.0")!))
+            let request = try #require(StubURLProtocol.lastRequest)
+            #expect(request.url?.absoluteString == "https://lirnyk.app/api/latest?v=0.2.0&os=15")
+        }
+
+        @Test(arguments: [503, 200])
+        func countedCheckFallsBackToGitHub(lirnykStatus: Int) async throws {
+            var urls: [URL?] = []
+            StubURLProtocol.handler = { request in
+                urls.append(request.url)
+                return request.url?.host() == "lirnyk.app" ? (lirnykStatus, Data("oops".utf8)) : (200, Self.release("v0.3.0"))
+            }
+
+            let result = try await Self.checker(current: "0.2.0").check(counted: true)
+
+            #expect(result != .upToDate)
+            #expect(urls.map { $0?.host() } == ["lirnyk.app", "api.github.com"])
+        }
+
+        @Test func countedCheckReportsGitHubErrorWhenBothFail() async {
+            StubURLProtocol.handler = { request in (request.url?.host() == "lirnyk.app" ? 502 : 403, Data()) }
+            await #expect(throws: UpdateCheckError.server(status: 403)) {
+                try await Self.checker(current: "0.2.0").check(counted: true)
             }
         }
 
