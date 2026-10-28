@@ -86,3 +86,18 @@ gh release create v0.3.0 build/release/Lirnyk-0.3.0.dmg build/release/Lirnyk.dmg
 ```
 
 Then, in an installed older version, _Settings → About → Check for Updates_ should offer the new release.
+
+## 6. Update the Homebrew cask
+
+The cask lives in [cheyako/homebrew-tap](https://github.com/cheyako/homebrew-tap), checked out next to this repo as
+`../homebrew-tap` (or set `TAP_DIR`). After the release is published:
+
+```
+make cask
+cd ../homebrew-tap
+git commit -am "Lirnyk 0.3.0" && git push
+```
+
+`make cask` writes `Casks/lirnyk.rb` with the version and the SHA-256 of `build/release/Lirnyk.dmg`; the cask downloads
+`releases/download/v<version>/Lirnyk.dmg`, so that file must be attached to the release. To check it:
+`brew audit --cask --strict --online cheyako/tap/lirnyk` (needs `brew trust cheyako/tap`).

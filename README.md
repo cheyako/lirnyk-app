@@ -19,6 +19,12 @@ the HUD shows the error, nothing is pasted, and your clipboard is restored.
 
 The app has no Dock icon. It starts at login by default.
 
+## Install
+Download the notarized DMG from [lirnyk.app](https://lirnyk.app) or the
+[latest release](https://github.com/cheyako/lirnyk-app/releases/latest), or use Homebrew:
+
+    brew install --cask cheyako/tap/lirnyk
+
 ## Requirements
 - macOS 14+
 - Xcode 26, XcodeGen (`brew install xcodegen`)
@@ -30,6 +36,7 @@ The app has no Dock icon. It starts at login by default.
     make install   # Release build → /Applications/Lirnyk.app and launch
     make release   # notarized DMG + release notes in build/release/ (see docs/releasing.md)
     make notes     # regenerate release notes for the current version from CHANGELOG.md
+    make cask      # update the Homebrew cask in ../homebrew-tap after a release
     make clean     # remove build/ and the generated Xcode project
 
 `Lirnyk.xcodeproj` is generated from `project.yml`. Every make target regenerates it, so edit `project.yml`, not the project.
@@ -80,7 +87,7 @@ Lirnyk/
   UI/           menu, HUD panel, Settings window, menu-bar icon
 LirnykTests/    Swift Testing unit tests with fakes for the system and network
 scripts/        release.sh (notarized DMG) and its tests
-scripts/        also notes.sh (release notes from CHANGELOG.md)
+scripts/        also notes.sh (release notes from CHANGELOG.md) and cask.sh (Homebrew cask)
 docs/           release steps and manual test checklist
 ```
 

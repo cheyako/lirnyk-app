@@ -8,6 +8,8 @@ trap 'rm -rf "$FAKES"' EXIT
 export PATH="$FAKES:$PATH"
 # shellcheck source=release.sh
 source scripts/release.sh
+# shellcheck source=cask.sh
+source scripts/cask.sh
 set +e # release.sh enables errexit; checks below expect failing commands
 failures=0
 
@@ -88,6 +90,11 @@ check "release_notes includes the DMG's SHA-256" 0 release_notes 0.2.0 "$CHANGEL
 check "release_notes works before the DMG exists" 0 release_notes 0.2.0 "$CHANGELOG" "$FAKES/missing.dmg"
 [[ $LAST_OUTPUT == *"run make release first"* ]] || { echo "✘ no placeholder: $LAST_OUTPUT"; failures=$((failures + 1)); }
 check "release_notes fails without a changelog section" 1 release_notes 9.9.9 "$CHANGELOG" "$FAKES/Lirnyk.dmg"
+
+check "cask_file writes the version and checksum" 0 cask_file 1.2.3 abc123
+[[ $LAST_OUTPUT == *'version "1.2.3"'* && $LAST_OUTPUT == *'sha256 "abc123"'* \
+  && $LAST_OUTPUT == *'releases/download/v#{version}/Lirnyk.dmg'* ]] \
+  && echo "✔ cask points at the version's Lirnyk.dmg" || { echo "✘ wrong cask: $LAST_OUTPUT"; failures=$((failures + 1)); }
 
 echo "$failures failure(s)"
 exit $(( failures > 0 ))
