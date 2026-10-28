@@ -5,6 +5,10 @@ User-facing changes in each Lirnyk release, newest first. Add entries under **Un
 
 ## Unreleased
 
+## 0.3.0 — 2026-10-28
+
+Lirnyk 0.3.0 adds local models through Ollama, a redesigned Settings window and automatic update checks.
+
 ### New
 - **Ollama support**: choose *Ollama (local)* to rewrite text with a model running on your Mac. No API key needed.
   The model list shows what you've pulled; the server address can point to another machine on your network.
@@ -16,6 +20,8 @@ User-facing changes in each Lirnyk release, newest first. Add entries under **Un
   turn it off in About. These daily checks go to lirnyk.app, which counts them anonymously (only the app and macOS
   version are sent; see the [privacy page](https://lirnyk.app/privacy)).
 - **Support Lirnyk** on Ko-fi from Settings → About or the menu-bar menu.
+- **New app icon** and a sharper menu-bar icon.
+- **Open source** under the GPLv3.
 
 ## 0.2.0 — 2026-10-27
 

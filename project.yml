@@ -16,8 +16,8 @@ settings:
     DEVELOPMENT_TEAM: 2S5U65Y5CZ
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "Apple Development"
-    MARKETING_VERSION: "0.2.0"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "0.3.0"
+    CURRENT_PROJECT_VERSION: "3"
 targets:
   Lirnyk:
     type: application
