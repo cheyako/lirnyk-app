@@ -30,6 +30,7 @@ extension NetworkTests {
             #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer sk-or-123")
             #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
             #expect(request.value(forHTTPHeaderField: "X-Title") == "Lirnyk")
+            #expect(request.value(forHTTPHeaderField: "HTTP-Referer") == "https://lirnyk.app")
 
             let body = try #require(StubURLProtocol.lastBody)
             let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
@@ -176,6 +177,7 @@ extension NetworkTests.AIClientTests {
         #expect(request.url?.absoluteString == url)
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer key-1")
         #expect(request.value(forHTTPHeaderField: "X-Title") == nil)
+        #expect(request.value(forHTTPHeaderField: "HTTP-Referer") == nil)
         #expect(request.value(forHTTPHeaderField: "Accept") == "application/json")
         let body = try #require(StubURLProtocol.lastBody)
         let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])

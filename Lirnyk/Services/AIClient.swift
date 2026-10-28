@@ -14,6 +14,8 @@ final class AIClient: RephraseClient {
     static let anthropicMaxTokens = 8192
     /// Local models can take a while to load into memory on first use.
     static let ollamaTimeout: TimeInterval = 120
+    /// OpenRouter lists the app in its rankings under this site URL.
+    static let siteURL = "https://lirnyk.app"
 
     /// Nil only for an Ollama server address that isn't a URL.
     static func endpoint(for provider: AIProvider, server: String = AIProvider.defaultOllamaServer) -> URL? {
@@ -54,7 +56,10 @@ final class AIClient: RephraseClient {
                 messages: [ChatMessage(role: "user", content: text)]))
         case .openRouter, .openAI, .gemini, .ollama:
             if provider.requiresAPIKey { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
-            if provider == .openRouter { request.setValue("Lirnyk", forHTTPHeaderField: "X-Title") }
+            if provider == .openRouter {
+                request.setValue("Lirnyk", forHTTPHeaderField: "X-Title")
+                request.setValue(Self.siteURL, forHTTPHeaderField: "HTTP-Referer")
+            }
             var messages: [ChatMessage] = []
             if let system { messages.append(ChatMessage(role: "system", content: system)) }
             messages.append(ChatMessage(role: "user", content: text))
