@@ -15,7 +15,7 @@ cask "lirnyk" do
   url "https://github.com/cheyako/lirnyk-app/releases/download/v#{version}/Lirnyk.dmg",
       verified: "github.com/cheyako/lirnyk-app/"
   name "Lirnyk"
-  desc "Rewrite selected text in any app with AI"
+  desc "Rewrite selected text in any app with a hotkey, using AI or local Ollama"
   homepage "https://lirnyk.app/"
 
   livecheck do
