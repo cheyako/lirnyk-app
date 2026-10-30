@@ -5,6 +5,8 @@
 macOS menu-bar app that rephrases the selected text in any app with AI: [OpenRouter](https://openrouter.ai), OpenAI, Anthropic, Gemini, or a local model through [Ollama](https://ollama.com).
 Select text, press a profile hotkey, and the selection is replaced with the rewritten text. ⌘Z undoes it.
 
+<p align="center"><img src="design/lirnyk-demo-1200.gif" width="800" alt="Demo: select a sloppy reply, press ⌃⌥F, and Lirnyk rewrites it in place with the Friendly profile"></p>
+
 ## How it works
 
 1. You press a profile's global hotkey (for example ⌃⌥F) while text is selected.
