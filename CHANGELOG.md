@@ -5,6 +5,10 @@ User-facing changes in each Lirnyk release, newest first. Add entries under **Un
 
 ## Unreleased
 
+### New
+- **Start and stop Ollama from Settings**: with *Ollama (local)* selected, *Start Ollama* runs the Ollama server
+  in the background and *Stop Ollama* shuts it down. A server started by Lirnyk stops when Lirnyk quits.
+
 ## 0.3.0 — 2026-10-28
 
 Lirnyk 0.3.0 adds local models through Ollama, a redesigned Settings window and automatic update checks.

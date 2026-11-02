@@ -6,6 +6,7 @@ struct SettingsView {
     let profiles: ProfileStore
     let permissions: PermissionsService
     let client: RephraseClient
+    let ollama: OllamaLauncher
     let updates: UpdateMonitor
 
     /// Every pane shares one size so the window doesn't jump when switching tabs.
@@ -19,7 +20,7 @@ struct SettingsView {
 
     var panes: [Pane] {
         [
-            pane("General", symbol: "gearshape", GeneralSettingsView(settings: settings, permissions: permissions, client: client)),
+            pane("General", symbol: "gearshape", GeneralSettingsView(settings: settings, permissions: permissions, client: client, ollama: ollama)),
             pane("Profiles", symbol: "text.bubble", ProfilesSettingsView(store: profiles, client: client)),
             pane("About", symbol: "info.circle", AboutSettingsView(updates: updates)),
         ]
@@ -101,6 +102,7 @@ struct GeneralSettingsView: View {
     @Bindable var settings: SettingsStore
     let permissions: PermissionsService
     let client: RephraseClient
+    let ollama: OllamaLauncher
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
@@ -119,7 +121,7 @@ struct GeneralSettingsView: View {
                     }
                 }
             }
-            AISettingsSections(settings: settings, client: client)
+            AISettingsSections(settings: settings, client: client, ollama: ollama)
             Section {
                 Toggle(isOn: $launchAtLogin) {
                     SettingsLabel("Launch at login", symbol: "power", color: .green)
@@ -144,6 +146,7 @@ struct GeneralSettingsView: View {
 struct AISettingsSections: View {
     @Bindable var settings: SettingsStore
     let client: RephraseClient
+    let ollama: OllamaLauncher
 
     @State private var testStatus: StatusMessage?
     @State private var showsAPIKey = false
@@ -185,6 +188,9 @@ struct AISettingsSections: View {
                 } else {
                     TextField(text: $settings.ollamaServer, prompt: Text(AIProvider.defaultOllamaServer)) {
                         SettingsLabel("Server", symbol: "server.rack", color: .gray)
+                    }
+                    if OllamaLauncher.isLocal(settings.ollamaServer) {
+                        ollamaServerRow
                     }
                 }
                 Picker(selection: modelChoice) {
@@ -236,7 +242,32 @@ struct AISettingsSections: View {
             }
         }
         .onAppear(perform: syncCustomModel)
-        .task(id: "\(settings.provider.rawValue) \(settings.ollamaServer)") { await loadOllamaModels() }
+        .task(id: "\(settings.provider.rawValue) \(settings.ollamaServer) \(ollama.state)") { await loadOllamaModels() }
+    }
+
+    /// Starts or stops a local `ollama serve` that Lirnyk owns.
+    private var ollamaServerRow: some View {
+        LabeledContent {
+            switch ollama.state {
+            case .starting, .running:
+                Button("Stop Ollama", action: ollama.stop)
+            case .stopped, .failed:
+                Button("Start Ollama") { ollama.start(server: settings.ollamaServer) }
+                    .disabled(ollamaModels != nil)
+            }
+        } label: {
+            SettingsLabel("Local server", symbol: "power", color: .green)
+            switch ollama.state {
+            case .starting:
+                StatusView(status: .progress("Starting…"))
+            case .running:
+                Text("Started by Lirnyk. It stops when Lirnyk quits.")
+            case let .failed(message):
+                StatusView(status: .failure(message))
+            case .stopped:
+                Text(ollamaModels != nil ? "Already running." : "Not running.")
+            }
+        }
     }
 
     private var apiKeyRow: some View {

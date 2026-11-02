@@ -94,3 +94,31 @@ extension NetworkTests {
         }
     }
 }
+
+struct OllamaLauncherTests {
+    @Test(arguments: ["http://localhost:11434", "127.0.0.1:11434", "LOCALHOST", "http://[::1]:11434"])
+    func localServerCanBeStarted(server: String) {
+        #expect(OllamaLauncher.isLocal(server))
+    }
+
+    @Test(arguments: ["http://studio.local:11434", "192.168.1.5:11434", ""])
+    func remoteServerCannotBeStarted(server: String) {
+        #expect(!OllamaLauncher.isLocal(server))
+    }
+
+    @Test func listensWhereSettingsPoint() {
+        #expect(OllamaLauncher.listenAddress("localhost:11500/") == "localhost:11500")
+        #expect(OllamaLauncher.listenAddress("localhost") == nil)
+    }
+
+    @Test func findsFirstInstalledBinary() {
+        let launcher = OllamaLauncher { $0 == "/usr/local/bin/ollama" }
+        #expect(launcher.executablePath == "/usr/local/bin/ollama")
+    }
+
+    @Test func missingBinaryFailsToStart() {
+        let launcher = OllamaLauncher { _ in false }
+        launcher.start(server: AIProvider.defaultOllamaServer)
+        #expect(launcher.state == .failed("Ollama isn't installed."))
+    }
+}

@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let profiles = ProfileStore()
     let permissions = PermissionsService()
     let appState = AppState()
+    let ollama = OllamaLauncher()
     private let hud = HUDController()
     let updates: UpdateMonitor = {
         let checker = UpdateChecker()
@@ -53,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         settings.flushAPIKey()
+        ollama.stop()
     }
 
     /// Runs a profile; `delay` lets the menu close and focus return to the previous app.
@@ -64,7 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private lazy var settingsWindow = SettingsWindowController { [unowned self] in
-        SettingsView(settings: settings, profiles: profiles, permissions: permissions, client: client, updates: updates)
+        SettingsView(settings: settings, profiles: profiles, permissions: permissions, client: client, ollama: ollama, updates: updates)
     }
 
     func openSettings() {
