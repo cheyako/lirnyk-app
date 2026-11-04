@@ -340,6 +340,20 @@ struct AboutSettingsView: View {
     private static let changelogURL = URL(string: "https://github.com/cheyako/lirnyk-app/blob/main/CHANGELOG.md")!
     static let donateURL = URL(string: "https://ko-fi.com/cheyako")!
 
+    /// Opens a draft to support@lirnyk.app with the versions filled in, so reports arrive with what's needed to reproduce.
+    static var contactURL: URL {
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "support@lirnyk.app"
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: "Lirnyk \(UpdateChecker.currentVersion)"),
+            URLQueryItem(name: "body", value: "\n\n—\nLirnyk \(UpdateChecker.currentVersion) (\(UpdateChecker.currentBuild)), "
+                + "macOS \(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"),
+        ]
+        return components.url!
+    }
+
     @State private var updateStatus: StatusMessage?
 
     var body: some View {
@@ -384,6 +398,13 @@ struct AboutSettingsView: View {
                 }
                 Link(destination: Self.repositoryURL) {
                     SettingsLabel("Source on GitHub", symbol: "chevron.left.forwardslash.chevron.right", color: .gray)
+                }
+                LabeledContent {
+                    Link("Email", destination: Self.contactURL)
+                } label: {
+                    SettingsLabel("Contact", symbol: "envelope.fill", color: .teal)
+                    Text("support@lirnyk.app")
+                        .textSelection(.enabled)
                 }
             }
             Section {
