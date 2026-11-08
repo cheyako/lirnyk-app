@@ -17,13 +17,19 @@ final class ProfileStore {
         self.fileURL = fileURL
     }
 
-    /// Loads profiles from disk. Seeds defaults when the file is missing or corrupt.
+    /// Loads profiles from disk. Seeds defaults when the file is missing or corrupt, and upgrades untouched old
+    /// default prompts (see `DefaultProfiles.upgrade`).
     /// - Returns: `true` if defaults were seeded.
     @discardableResult
     func load() -> Bool {
         if let data = try? Data(contentsOf: fileURL) {
             if let decoded = try? JSONDecoder().decode([Profile].self, from: data) {
-                profiles = decoded
+                if let upgraded = DefaultProfiles.upgrade(decoded) {
+                    profiles = upgraded
+                    persist()
+                } else {
+                    profiles = decoded
+                }
                 return false
             }
             backUpCorruptFile()

@@ -29,6 +29,33 @@ struct ProfileStoreTests {
         #expect(reloaded.profiles.last?.prompt == "Переклади українською 🇺🇦")
     }
 
+    @Test func untouchedOldDefaultPromptIsUpgraded() throws {
+        let old = Profile(title: "Corporate", prompt: DefaultProfiles.corporateV1)
+        let edited = Profile(title: "Corporate copy", prompt: DefaultProfiles.corporateV1 + " Be brief.")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try JSONEncoder().encode([old, edited]).write(to: fileURL)
+
+        let store = ProfileStore(fileURL: fileURL)
+        #expect(store.load() == false)
+        let corporate = try #require(DefaultProfiles.make().first { $0.title == "Corporate" })
+        #expect(store.profiles[0].prompt == corporate.prompt)
+        #expect(store.profiles[0].id == old.id)
+        #expect(store.profiles[1] == edited)
+
+        let reloaded = ProfileStore(fileURL: fileURL)
+        reloaded.load()
+        #expect(reloaded.profiles == store.profiles)
+    }
+
+    @Test func defaultPromptIsFoundByBuiltInTitleOnly() {
+        for profile in DefaultProfiles.make() {
+            #expect(DefaultProfiles.defaultPrompt(forTitle: profile.title) == profile.prompt)
+        }
+        #expect(DefaultProfiles.defaultPrompt(forTitle: "Corporate ") != nil)
+        #expect(DefaultProfiles.defaultPrompt(forTitle: "Work") == nil)
+        #expect(DefaultProfiles.defaultPrompt(forTitle: "") == nil)
+    }
+
     @Test func emptyListIsNotReseeded() {
         let store = ProfileStore(fileURL: fileURL)
         store.load()
