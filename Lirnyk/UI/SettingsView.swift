@@ -340,6 +340,20 @@ struct AboutSettingsView: View {
     private static let changelogURL = URL(string: "https://github.com/cheyako/lirnyk-app/blob/main/CHANGELOG.md")!
     static let donateURL = URL(string: "https://ko-fi.com/cheyako")!
 
+    /// Opens a draft to support@lirnyk.app with the versions filled in, so reports arrive with what's needed to reproduce.
+    static var contactURL: URL {
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "support@lirnyk.app"
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: "Lirnyk \(UpdateChecker.currentVersion)"),
+            URLQueryItem(name: "body", value: "\n\n—\nLirnyk \(UpdateChecker.currentVersion) (\(UpdateChecker.currentBuild)), "
+                + "macOS \(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"),
+        ]
+        return components.url!
+    }
+
     @State private var updateStatus: StatusMessage?
 
     var body: some View {
@@ -384,6 +398,13 @@ struct AboutSettingsView: View {
                 }
                 Link(destination: Self.repositoryURL) {
                     SettingsLabel("Source on GitHub", symbol: "chevron.left.forwardslash.chevron.right", color: .gray)
+                }
+                LabeledContent {
+                    Link("Email", destination: Self.contactURL)
+                } label: {
+                    SettingsLabel("Contact", symbol: "envelope.fill", color: .teal)
+                    Text("support@lirnyk.app")
+                        .textSelection(.enabled)
                 }
             }
             Section {
@@ -498,6 +519,7 @@ struct ProfileEditor: View {
 
     @State private var tryResult: String?
     @State private var tryStatus: StatusMessage?
+    @State private var confirmingReset = false
 
     init(profile: Profile, client: RephraseClient, sampleText: Binding<String>,
          onChange: @escaping (Profile) -> Void, onShortcutChange: @escaping () -> Void) {
@@ -528,7 +550,20 @@ struct ProfileEditor: View {
             } header: {
                 Text("Prompt")
             } footer: {
-                Text("Sent to the model as the system prompt, followed by your selected text.")
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Sent to the model as the system prompt, followed by your selected text.")
+                    if let defaultPrompt {
+                        Spacer()
+                        Button("Reset to Default") { confirmingReset = true }
+                            .disabled(profile.prompt == defaultPrompt)
+                            .help("Replace this prompt with the one Lirnyk ships for \(profile.title)")
+                            .confirmationDialog("Reset the \(profile.title) prompt?", isPresented: $confirmingReset) {
+                                Button("Reset Prompt", role: .destructive) { profile.prompt = defaultPrompt }
+                            } message: {
+                                Text("Your changes to this prompt will be replaced with the version that comes with Lirnyk.")
+                            }
+                    }
+                }
             }
             Section {
                 TextEditor(text: $sampleText)
@@ -562,6 +597,9 @@ struct ProfileEditor: View {
         .formStyle(.grouped)
         .onChange(of: profile) { _, updated in onChange(updated) }
     }
+
+    /// The shipped prompt for a built-in profile; nil hides the Reset button.
+    private var defaultPrompt: String? { DefaultProfiles.defaultPrompt(forTitle: profile.title) }
 
     private func tryProfile() {
         tryStatus = .progress("Rewriting…")

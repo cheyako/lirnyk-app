@@ -8,6 +8,14 @@ User-facing changes in each Lirnyk release, newest first. Add entries under **Un
 ### New
 - **Start and stop Ollama from Settings**: with *Ollama (local)* selected, *Start Ollama* runs the Ollama server
   in the background and *Stop Ollama* shuts it down. A server started by Lirnyk stops when Lirnyk quits.
+- **Reset to Default** under the prompt of the built-in Friendly, Corporate and Tech profiles brings back the
+  prompt that comes with Lirnyk, after you've edited it.
+
+### Changed
+- **Better Corporate profile**: it now tones down sarcasm and passive aggression, leaves text that is already fine
+  alone, and no longer adds greetings or requests you didn't write. The new prompt came out of a measured test on
+  English and Ukrainian texts; see [how it was chosen](https://lirnyk.app/blog/prompt-tuning-llm-judge). If you
+  never edited the Corporate prompt, it updates automatically; an edited prompt is left as it is.
 
 ## 0.3.0 — 2026-10-28
 
